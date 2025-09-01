@@ -1,0 +1,255 @@
+name: azure-container-instance
+version: v0.1.0
+description: DevPod provider for Azure Container Instances (ACI) - Run dev containers serverlessly on Azure
+icon: https://raw.githubusercontent.com/Azure/azure-sdk-for-net/main/sdk/containerinstance/Azure.ResourceManager.ContainerInstance/images/icon.png
+homepage: https://github.com/zetomatoz/devpod-provider-aci
+
+options:
+  # Azure Authentication Options
+  AZURE_SUBSCRIPTION_ID:
+    description: The Azure subscription ID to use
+    required: true
+    command: |-
+      if [ -n "$AZURE_SUBSCRIPTION_ID" ]; then
+        echo "$AZURE_SUBSCRIPTION_ID"
+      else
+        az account show --query id -o tsv 2>/dev/null || true
+      fi
+  
+  AZURE_TENANT_ID:
+    description: The Azure tenant ID
+    required: false
+    command: |-
+      if [ -n "$AZURE_TENANT_ID" ]; then
+        echo "$AZURE_TENANT_ID"
+      else
+        az account show --query tenantId -o tsv 2>/dev/null || true
+      fi
+  
+  AZURE_CLIENT_ID:
+    description: The Azure service principal client ID (for service principal auth)
+    required: false
+    password: true
+  
+  AZURE_CLIENT_SECRET:
+    description: The Azure service principal client secret (for service principal auth)
+    required: false
+    password: true
+  
+  # Resource Configuration
+  AZURE_RESOURCE_GROUP:
+    description: The Azure resource group name to use for ACI
+    required: true
+    default: devpod-aci-rg
+  
+  AZURE_REGION:
+    description: The Azure region to deploy containers in
+    required: true
+    default: eastus
+    suggestions:
+    - eastus
+    - westus2
+    - westeurope
+    - northeurope
+    - southeastasia
+    - australiaeast
+  
+  # Container Configuration
+  ACI_CPU_CORES:
+    description: Number of CPU cores for the container
+    required: false
+    default: "2"
+    suggestions:
+    - "1"
+    - "2"
+    - "4"
+    - "8"
+  
+  ACI_MEMORY_GB:
+    description: Memory in GB for the container
+    required: false
+    default: "4"
+    suggestions:
+    - "2"
+    - "4"
+    - "8"
+    - "16"
+  
+  ACI_GPU_COUNT:
+    description: Number of GPUs (if needed, only in supported regions)
+    required: false
+    default: "0"
+  
+  ACI_RESTART_POLICY:
+    description: Container restart policy
+    required: false
+    default: Never
+    suggestions:
+    - Always
+    - OnFailure
+    - Never
+  
+  # Network Configuration
+  ACI_VNET_NAME:
+    description: Virtual network name (for private container groups)
+    required: false
+  
+  ACI_SUBNET_NAME:
+    description: Subnet name within the virtual network
+    required: false
+  
+  ACI_DNS_LABEL:
+    description: DNS name label for public container groups
+    required: false
+  
+  # Registry Configuration
+  ACR_SERVER:
+    description: Azure Container Registry server URL (e.g., myregistry.azurecr.io)
+    required: false
+  
+  ACR_USERNAME:
+    description: Azure Container Registry username
+    required: false
+  
+  ACR_PASSWORD:
+    description: Azure Container Registry password
+    required: false
+    password: true
+  
+  # Storage Configuration
+  ACI_STORAGE_ACCOUNT_NAME:
+    description: Azure Storage account name for persistent volumes
+    required: false
+  
+  ACI_STORAGE_ACCOUNT_KEY:
+    description: Azure Storage account key
+    required: false
+    password: true
+  
+  ACI_FILE_SHARE_NAME:
+    description: Azure File share name for persistent storage
+    required: false
+    default: devpod-workspace
+  
+  # DevPod Agent Configuration
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent
+    required: false
+    default: /home/devpod/.devpod
+  
+  INACTIVITY_TIMEOUT:
+    description: Automatically delete the container after inactivity period
+    required: false
+    default: 30m
+  
+  INJECT_GIT_CREDENTIALS:
+    description: Inject git credentials into the container
+    required: false
+    default: "true"
+  
+  INJECT_DOCKER_CREDENTIALS:
+    description: Inject docker credentials into the container
+    required: false
+    default: "false"
+
+optionGroups:
+  - name: Azure Authentication
+    options:
+    - AZURE_SUBSCRIPTION_ID
+    - AZURE_TENANT_ID
+    - AZURE_CLIENT_ID
+    - AZURE_CLIENT_SECRET
+    defaultVisible: true
+  
+  - name: Resource Configuration
+    options:
+    - AZURE_RESOURCE_GROUP
+    - AZURE_REGION
+    - ACI_CPU_CORES
+    - ACI_MEMORY_GB
+    - ACI_GPU_COUNT
+    - ACI_RESTART_POLICY
+    defaultVisible: true
+  
+  - name: Network Configuration
+    options:
+    - ACI_VNET_NAME
+    - ACI_SUBNET_NAME
+    - ACI_DNS_LABEL
+    defaultVisible: false
+  
+  - name: Container Registry
+    options:
+    - ACR_SERVER
+    - ACR_USERNAME
+    - ACR_PASSWORD
+    defaultVisible: false
+  
+  - name: Storage Configuration
+    options:
+    - ACI_STORAGE_ACCOUNT_NAME
+    - ACI_STORAGE_ACCOUNT_KEY
+    - ACI_FILE_SHARE_NAME
+    defaultVisible: false
+  
+  - name: DevPod Agent Options
+    options:
+    - AGENT_PATH
+    - INACTIVITY_TIMEOUT
+    - INJECT_GIT_CREDENTIALS
+    - INJECT_DOCKER_CREDENTIALS
+    defaultVisible: false
+
+agent:
+  path: ${AGENT_PATH}
+  driver: docker
+  docker:
+    path: /usr/local/bin/docker
+    install: false
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
+  exec:
+    command: |-
+      "${ACI_PROVIDER}" command "${COMMAND}"
+    shutdown: |-
+      "${ACI_PROVIDER}" stop
+
+binaries:
+  ACI_PROVIDER:
+    - os: linux
+      arch: amd64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-linux-amd64
+      checksum: ${CHECKSUM_LINUX_AMD64}
+    - os: linux
+      arch: arm64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-linux-arm64
+      checksum: ${CHECKSUM_LINUX_ARM64}
+    - os: darwin
+      arch: amd64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-darwin-amd64
+      checksum: ${CHECKSUM_DARWIN_AMD64}
+    - os: darwin
+      arch: arm64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-darwin-arm64
+      checksum: ${CHECKSUM_DARWIN_ARM64}
+    - os: windows
+      arch: amd64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-windows-amd64.exe
+      checksum: ${CHECKSUM_WINDOWS_AMD64}
+
+exec:
+  init: |-
+    "${ACI_PROVIDER}" init
+  create: |-
+    "${ACI_PROVIDER}" create
+  delete: |-
+    "${ACI_PROVIDER}" delete
+  start: |-
+    "${ACI_PROVIDER}" start
+  stop: |-
+    "${ACI_PROVIDER}" stop
+  status: |-
+    "${ACI_PROVIDER}" status
+  command: |-
+    "${ACI_PROVIDER}" command "${COMMAND}"
