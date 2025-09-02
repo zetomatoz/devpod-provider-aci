@@ -1,19 +1,15 @@
-namespace DevPod.Provider.ACI.Services;
-
-using System.Text;
 using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.ContainerInstance.Models;
-using Azure.ResourceManager.Network;
-using Azure.ResourceManager.Network.Models;
 using Azure.ResourceManager.Resources;
 using DevPod.Provider.ACI.Models;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
-using Renci.SshNet;
+
+namespace DevPod.Provider.ACI.Services;
 
 public class AciService : IAciService
 {
@@ -33,32 +29,32 @@ public class AciService : IAciService
 
         // Configure retry policy for transient failures
         _retryPolicy = Policy
-            .Handle<RequestFailedException>(ex => IsTransientError(ex))
+            .Handle<RequestFailedException>(IsTransientError)
             .WaitAndRetryAsync(
                 3,
                 retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 (outcome, timespan, retryCount, context) =>
                 {
-                    _logger.LogWarning($"Retry {retryCount} after {timespan} seconds");
+                    _logger.LogWarning("Retry {RetryCount} after {Timespan} seconds", retryCount, timespan.TotalSeconds);
                 });
     }
 
     public async Task<ContainerStatus> CreateContainerGroupAsync(ContainerGroupDefinition definition)
     {
-        _logger.LogInformation($"Creating container group: {definition.Name}");
+        _logger.LogInformation("Creating container group: {ContainerGroupName}", definition.Name);
 
         var armClient = await _authService.GetArmClientAsync();
         var options = _optionsService.GetOptions();
-        
+
         // Get or create resource group
         var resourceGroup = await GetOrCreateResourceGroupAsync(armClient, options);
-        
+
         // Build container group data
         var containerGroupData = await BuildContainerGroupDataAsync(definition, resourceGroup);
 
         // Create container group
         var containerGroupCollection = resourceGroup.GetContainerGroups();
-        
+
         var operation = await _retryPolicy.ExecuteAsync(async () =>
             await containerGroupCollection.CreateOrUpdateAsync(
                 WaitUntil.Completed,
@@ -66,58 +62,50 @@ public class AciService : IAciService
                 containerGroupData));
 
         var containerGroup = operation.Value;
-        
-        _logger.LogInformation($"Container group created: {containerGroup.Data.Name}");
-        
+
+        _logger.LogInformation("Container group created: {ContainerGroupName}", containerGroup.Data.Name);
+
         return MapToContainerStatus(containerGroup.Data);
     }
 
     public async Task<ContainerStatus> GetContainerGroupStatusAsync(string name)
     {
-        _logger.LogDebug($"Getting status for container group: {name}");
+        _logger.LogDebug("Getting status for container group: {ContainerGroupName}", name);
 
         var containerGroup = await GetContainerGroupAsync(name);
-        if (containerGroup == null)
-        {
-            return new ContainerStatus
+        return containerGroup == null
+            ? new ContainerStatus
             {
                 Name = name,
                 State = "NotFound",
-                ProvisioningState = "NotFound"
-            };
-        }
-
-        return MapToContainerStatus(containerGroup.Data);
+                ProvisioningState = "NotFound",
+            }
+            : MapToContainerStatus(containerGroup.Data);
     }
 
     public async Task DeleteContainerGroupAsync(string name)
     {
-        _logger.LogInformation($"Deleting container group: {name}");
+        _logger.LogInformation("Deleting container group: {ContainerGroupName}", name);
 
         var containerGroup = await GetContainerGroupAsync(name);
         if (containerGroup != null)
         {
             await containerGroup.DeleteAsync(WaitUntil.Completed);
-            _logger.LogInformation($"Container group deleted: {name}");
+            _logger.LogInformation("Container group deleted: {ContainerGroupName}", name);
         }
         else
         {
-            _logger.LogWarning($"Container group not found: {name}");
+            _logger.LogWarning("Container group not found: {ContainerGroupName}", name);
         }
     }
 
     public async Task<ContainerStatus> StartContainerGroupAsync(string name)
     {
-        _logger.LogInformation($"Starting container group: {name}");
+        _logger.LogInformation("Starting container group: {ContainerGroupName}", name);
 
-        var containerGroup = await GetContainerGroupAsync(name);
-        if (containerGroup == null)
-        {
-            throw new InvalidOperationException($"Container group not found: {name}");
-        }
-
+        var containerGroup = await GetContainerGroupAsync(name) ?? throw new InvalidOperationException($"Container group not found: {name}");
         await containerGroup.StartAsync(WaitUntil.Completed);
-        
+
         // Refresh the container group data
         containerGroup = await GetContainerGroupAsync(name);
         return MapToContainerStatus(containerGroup!.Data);
@@ -125,16 +113,11 @@ public class AciService : IAciService
 
     public async Task<ContainerStatus> StopContainerGroupAsync(string name)
     {
-        _logger.LogInformation($"Stopping container group: {name}");
+        _logger.LogInformation("Stopping container group: {ContainerGroupName}", name);
 
-        var containerGroup = await GetContainerGroupAsync(name);
-        if (containerGroup == null)
-        {
-            throw new InvalidOperationException($"Container group not found: {name}");
-        }
-
+        var containerGroup = await GetContainerGroupAsync(name) ?? throw new InvalidOperationException($"Container group not found: {name}");
         await containerGroup.StopAsync();
-        
+
         // Refresh the container group data
         containerGroup = await GetContainerGroupAsync(name);
         return MapToContainerStatus(containerGroup!.Data);
@@ -142,13 +125,10 @@ public class AciService : IAciService
 
     public async Task<string> ExecuteCommandAsync(string containerGroupName, string command)
     {
-        _logger.LogDebug($"Executing command in container group: {containerGroupName}");
+        _logger.LogDebug("Executing command in container group: {ContainerGroupName}", containerGroupName);
 
-        var containerGroup = await GetContainerGroupAsync(containerGroupName);
-        if (containerGroup == null)
-        {
-            throw new InvalidOperationException($"Container group not found: {containerGroupName}");
-        }
+        var containerGroup = await GetContainerGroupAsync(containerGroupName) ??
+        throw new InvalidOperationException($"Container group not found: {containerGroupName}");
 
         // Get the first container in the group
         var containerName = containerGroup.Data.Containers.First().Name;
@@ -159,20 +139,17 @@ public class AciService : IAciService
 
         // Note: This is a simplified implementation. In production, you'd need to handle
         // the WebSocket connection properly to execute commands and retrieve output
-        
+
         // For now, we'll use SSH if available, or return a placeholder
         return await ExecuteViaSSHAsync(containerGroup.Data, command);
     }
 
     public async Task<string> GetContainerLogsAsync(string containerGroupName, string containerName)
     {
-        _logger.LogDebug($"Getting logs for container: {containerName} in group: {containerGroupName}");
+        _logger.LogDebug("Getting logs for container: {ContainerName} in group: {ContainerGroupName}", containerName, containerGroupName);
 
-        var containerGroup = await GetContainerGroupAsync(containerGroupName);
-        if (containerGroup == null)
-        {
-            throw new InvalidOperationException($"Container group not found: {containerGroupName}");
-        }
+        var containerGroup = await GetContainerGroupAsync(containerGroupName) ??
+        throw new InvalidOperationException($"Container group not found: {containerGroupName}");
 
         var container = containerGroup.Data.Containers.FirstOrDefault(c => c.Name == containerName);
         if (container == null)
@@ -184,7 +161,7 @@ public class AciService : IAciService
         return logsResult.Value.Content ?? string.Empty;
     }
 
-    public async Task<(string fqdn, string ipAddress)> GetContainerEndpointAsync(string name)
+    public async Task<(string Fqdn, string IpAddress)> GetContainerEndpointAsync(string name)
     {
         var containerGroup = await GetContainerGroupAsync(name);
         if (containerGroup == null)
@@ -206,12 +183,12 @@ public class AciService : IAciService
         try
         {
             var resourceGroup = await resourceGroups.GetAsync(options.AzureResourceGroup);
-            _logger.LogDebug($"Using existing resource group: {options.AzureResourceGroup}");
+            _logger.LogDebug("Using existing resource group: {AzureResourceGroup}", options.AzureResourceGroup);
             return resourceGroup.Value;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogInformation($"Creating resource group: {options.AzureResourceGroup}");
+            _logger.LogInformation("Creating resource group: {AzureResourceGroup}", options.AzureResourceGroup);
             var location = new AzureLocation(options.AzureRegion);
             var resourceGroupData = new ResourceGroupData(location);
             var operation = await resourceGroups.CreateOrUpdateAsync(
@@ -245,14 +222,14 @@ public class AciService : IAciService
         {
             container.EnvironmentVariables.Add(new ContainerEnvironmentVariable(envVar.Key)
             {
-                Value = envVar.Value
+                Value = envVar.Value,
             });
         }
 
         // Add DevPod specific environment variables
         container.EnvironmentVariables.Add(new ContainerEnvironmentVariable("DEVPOD")
         {
-            Value = "true"
+            Value = "true",
         });
 
         // Add ports
@@ -275,9 +252,9 @@ public class AciService : IAciService
         }
 
         // Create container group
-        var containerGroupData = new ContainerGroupData(location, new[] { container }, ContainerInstanceOperatingSystemType.Linux)
+        var containerGroupData = new ContainerGroupData(location, [container], ContainerInstanceOperatingSystemType.Linux)
         {
-            RestartPolicy = Enum.Parse<ContainerGroupRestartPolicy>(definition.RestartPolicy, true)
+            RestartPolicy = Enum.Parse<ContainerGroupRestartPolicy>(definition.RestartPolicy, true),
         };
 
         // Add registry credentials if provided
@@ -287,7 +264,7 @@ public class AciService : IAciService
                 definition.RegistryCredentials.Server)
             {
                 Username = definition.RegistryCredentials.Username,
-                Password = definition.RegistryCredentials.Password // todo double check it follows security best practices
+                Password = definition.RegistryCredentials.Password, // todo double check it follows security best practices
             });
         }
 
@@ -302,7 +279,7 @@ public class AciService : IAciService
         {
             // Public IP configuration
             containerGroupData.IPAddress = new ContainerGroupIPAddress(
-                definition.Ports.Select(p => new ContainerGroupPort(p)).ToList(),
+                [.. definition.Ports.Select(p => new ContainerGroupPort(p))],
                 ContainerGroupIPAddressType.Public);
 
             if (!string.IsNullOrEmpty(definition.DnsNameLabel))
@@ -320,8 +297,8 @@ public class AciService : IAciService
                     definition.FileShareVolume.ShareName,
                     definition.FileShareVolume.StorageAccountName)
                 {
-                    StorageAccountKey = definition.FileShareVolume.StorageAccountKey
-                }
+                    StorageAccountKey = definition.FileShareVolume.StorageAccountKey,
+                },
             };
             containerGroupData.Volumes.Add(volume);
 
@@ -350,7 +327,7 @@ public class AciService : IAciService
         }
     }
 
-    private ContainerStatus MapToContainerStatus(ContainerGroupData data)
+    private static ContainerStatus MapToContainerStatus(ContainerGroupData data)
     {
         var status = new ContainerStatus
         {
@@ -358,7 +335,7 @@ public class AciService : IAciService
             ProvisioningState = data.ProvisioningState ?? "Unknown",
             State = GetContainerGroupState(data),
             Fqdn = data.IPAddress?.Fqdn,
-            IpAddress = data.IPAddress?.IP.ToString()
+            IpAddress = data.IPAddress?.IP.ToString(),
         };
 
         foreach (var container in data.Containers)
@@ -370,7 +347,7 @@ public class AciService : IAciService
                 StartTime = container.InstanceView?.CurrentState?.StartOn?.DateTime,
                 FinishTime = container.InstanceView?.CurrentState?.FinishOn?.DateTime,
                 ExitCode = container.InstanceView?.CurrentState?.ExitCode,
-                DetailedStatus = container.InstanceView?.CurrentState?.DetailStatus
+                DetailedStatus = container.InstanceView?.CurrentState?.DetailStatus,
             };
 
             status.Containers[container.Name] = instanceStatus;
@@ -379,11 +356,13 @@ public class AciService : IAciService
         return status;
     }
 
-    private string GetContainerGroupState(ContainerGroupData data)
+    private static string GetContainerGroupState(ContainerGroupData data)
     {
         // Check provisioning state first
         if (data.ProvisioningState == "Failed")
+        {
             return "Failed";
+        }
 
         // Check container states
         var containerStates = data.Containers
@@ -392,27 +371,36 @@ public class AciService : IAciService
             .ToList();
 
         if (containerStates.Any(s => s == "Running"))
+        {
             return "Running";
+        }
+
         if (containerStates.Any(s => s == "Terminated"))
+        {
             return "Stopped";
+        }
+
         if (containerStates.Any(s => s == "Waiting"))
+        {
             return "Pending";
+        }
 
         return "Unknown";
     }
 
-    private async Task<string> ExecuteViaSSHAsync(ContainerGroupData containerGroup, string command)
+    private static async Task<string> ExecuteViaSSHAsync(ContainerGroupData containerGroup, string command)
     {
         // This is a simplified implementation
         // In a real scenario, you'd need proper SSH connectivity to the container
         // For now, return a message indicating the command was received
+        await Task.CompletedTask;
         return $"Command '{command}' queued for execution";
     }
 
     private bool IsTransientError(RequestFailedException ex)
     {
-        return ex.Status == 429 || // Too Many Requests
-               ex.Status == 503 || // Service Unavailable
-               ex.Status == 504;   // Gateway Timeout
+        return ex.Status is 429 or // Too Many Requests
+               503 or // Service Unavailable
+               504;   // Gateway Timeout
     }
 }

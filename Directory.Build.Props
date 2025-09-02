@@ -40,6 +40,9 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     
+    <!-- StyleCop Suppressions -->
+    <NoWarn>$(NoWarn);SA1101;SA1204;SA1208;SA1516;SA1309;SA1600;SA1633</NoWarn>
+    
     <!-- Publishing Configuration (for main provider project) -->
     <IsPublishable Condition="'$(MSBuildProjectName)' == 'DevPod.Provider.ACI'">true</IsPublishable>
     <IsPublishable Condition="'$(MSBuildProjectName)' != 'DevPod.Provider.ACI'">false</IsPublishable>

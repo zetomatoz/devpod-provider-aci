@@ -2,12 +2,12 @@
   "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json",
   "settings": {
     "documentationRules": {
-      "companyName": "Your Organization",
+      "companyName": "zetomatoz",
       "copyrightText": "Copyright (c) {companyName}. All rights reserved.",
       "xmlHeader": false,
       "fileNamingConvention": "metadata",
-      "documentInterfaces": true,
-      "documentExposedElements": true,
+      "documentInterfaces": false,
+      "documentExposedElements": false,
       "documentInternalElements": false,
       "documentPrivateElements": false,
       "documentPrivateFields": false
@@ -48,12 +48,6 @@
     },
     "readabilityRules": {
       "allowBuiltInTypeAliases": true
-    },
-    "spacingRules": {
-      "requireSpacesInAnonymousDelegates": true,
-      "requireSpacesInConcatenation": true,
-      "requireSpacesInForLoop": true,
-      "requireSpacesInNullCoalescingOperator": true
     }
   }
 }

@@ -1,7 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
@@ -24,13 +20,13 @@ app.MapGet("/", () => new
     timestamp = DateTime.UtcNow,
     environment = app.Environment.EnvironmentName,
     container = Environment.GetEnvironmentVariable("HOSTNAME") ?? "unknown",
-    platform = "Azure Container Instances"
+    platform = "Azure Container Instances",
 });
 
 app.MapGet("/health", () => Results.Ok(new
 {
     status = "Healthy",
-    timestamp = DateTime.UtcNow
+    timestamp = DateTime.UtcNow,
 }));
 
 app.MapGet("/info", () => new
@@ -40,33 +36,35 @@ app.MapGet("/info", () => new
     dotnetVersion = Environment.Version.ToString(),
     osVersion = Environment.OSVersion.ToString(),
     processorCount = Environment.ProcessorCount,
-    workingSet = Environment.WorkingSet / (1024 * 1024) + " MB",
+    workingSet = (Environment.WorkingSet / (1024 * 1024)) + " MB",
     machineName = Environment.MachineName,
     userName = Environment.UserName,
-    currentDirectory = Environment.CurrentDirectory
+    currentDirectory = Environment.CurrentDirectory,
 });
 
 // Demonstrate Azure integration
+var azureSuggestions = new[]
+{
+    "Azure Storage",
+    "Azure Service Bus",
+    "Azure Cosmos DB",
+    "Azure Key Vault",
+    "Azure App Configuration",
+};
+
 app.MapGet("/azure", async (IConfiguration configuration) =>
 {
     // This would typically connect to Azure services
     return new
     {
         message = "Ready to integrate with Azure services",
-        suggestions = new[]
-        {
-            "Azure Storage",
-            "Azure Service Bus",
-            "Azure Cosmos DB",
-            "Azure Key Vault",
-            "Azure App Configuration"
-        },
+        suggestions = azureSuggestions,
         containerInfo = new
         {
             resourceGroup = Environment.GetEnvironmentVariable("AZURE_RESOURCE_GROUP"),
             region = Environment.GetEnvironmentVariable("AZURE_REGION"),
-            containerGroup = Environment.GetEnvironmentVariable("MACHINE_ID")
-        }
+            containerGroup = Environment.GetEnvironmentVariable("MACHINE_ID"),
+        },
     };
 });
 

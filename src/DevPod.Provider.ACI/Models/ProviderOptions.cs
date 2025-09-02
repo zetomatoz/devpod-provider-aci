@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace DevPod.Provider.ACI.Models;
 
 public class ProviderOptions
@@ -13,7 +15,7 @@ public class ProviderOptions
     public string AzureRegion { get; set; } = "eastus";
     public double AciCpuCores { get; set; } = 2.0;
     public double AciMemoryGb { get; set; } = 4.0;
-    public int AciGpuCount { get; set; } = 0;
+    public int AciGpuCount { get; set; }
     public string AciRestartPolicy { get; set; } = "Never";
 
     // Network Configuration
@@ -35,7 +37,7 @@ public class ProviderOptions
     public string AgentPath { get; set; } = "/home/devpod/.devpod";
     public string InactivityTimeout { get; set; } = "30m";
     public bool InjectGitCredentials { get; set; } = true;
-    public bool InjectDockerCredentials { get; set; } = false;
+    public bool InjectDockerCredentials { get; set; }
 
     // DevPod Machine Info
     public string? MachineId { get; set; }
@@ -45,18 +47,19 @@ public class ProviderOptions
 
     public static ProviderOptions FromEnvironment()
     {
-        var options = new ProviderOptions();
-
-        // Azure Authentication
-        options.AzureSubscriptionId = Environment.GetEnvironmentVariable("AZURE_SUBSCRIPTION_ID");
-        options.AzureTenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
-        options.AzureClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
-        options.AzureClientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
+        var options = new ProviderOptions
+        {
+            // Azure Authentication
+            AzureSubscriptionId = Environment.GetEnvironmentVariable("AZURE_SUBSCRIPTION_ID"),
+            AzureTenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID"),
+            AzureClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID"),
+            AzureClientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET"),
+        };
 
         // Resource Configuration
         options.AzureResourceGroup = Environment.GetEnvironmentVariable("AZURE_RESOURCE_GROUP") ?? options.AzureResourceGroup;
         options.AzureRegion = Environment.GetEnvironmentVariable("AZURE_REGION") ?? options.AzureRegion;
-        
+
         var cpuCores = Environment.GetEnvironmentVariable("ACI_CPU_CORES");
         if (!string.IsNullOrEmpty(cpuCores) && double.TryParse(cpuCores, out var cpu))
         {
@@ -95,17 +98,17 @@ public class ProviderOptions
         // DevPod Agent Configuration
         options.AgentPath = Environment.GetEnvironmentVariable("AGENT_PATH") ?? options.AgentPath;
         options.InactivityTimeout = Environment.GetEnvironmentVariable("INACTIVITY_TIMEOUT") ?? options.InactivityTimeout;
-        
+
         var injectGit = Environment.GetEnvironmentVariable("INJECT_GIT_CREDENTIALS");
         if (!string.IsNullOrEmpty(injectGit))
         {
-            options.InjectGitCredentials = injectGit.ToLower() == "true";
+            options.InjectGitCredentials = injectGit.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
         var injectDocker = Environment.GetEnvironmentVariable("INJECT_DOCKER_CREDENTIALS");
         if (!string.IsNullOrEmpty(injectDocker))
         {
-            options.InjectDockerCredentials = injectDocker.ToLower() == "true";
+            options.InjectDockerCredentials = injectDocker.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
         // DevPod Machine Info
@@ -122,8 +125,9 @@ public class ProviderOptions
         if (!string.IsNullOrEmpty(MachineId))
         {
             // Ensure the name is valid for ACI (lowercase, alphanumeric, hyphens)
-            return $"devpod-{MachineId}".ToLower().Replace("_", "-");
+            return $"devpod-{MachineId}".ToLower(CultureInfo.InvariantCulture).Replace("_", "-");
         }
-        return $"devpod-{Guid.NewGuid().ToString().Substring(0, 8)}".ToLower();
+
+        return $"devpod-{Guid.NewGuid().ToString()[..8]}".ToLower(CultureInfo.InvariantCulture);
     }
 }

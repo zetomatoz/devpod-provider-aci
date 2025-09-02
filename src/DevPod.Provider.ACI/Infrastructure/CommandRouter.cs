@@ -1,19 +1,14 @@
-namespace DevPod.Provider.ACI.Infrastructure;
-
 using DevPod.Provider.ACI.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
-public class CommandRouter
+namespace DevPod.Provider.ACI.Infrastructure;
+
+public class CommandRouter(IServiceProvider serviceProvider)
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<CommandRouter> _logger;
-
-    public CommandRouter(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-        _logger = serviceProvider.GetRequiredService<ILogger<CommandRouter>>();
-    }
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<CommandRouter> _logger = serviceProvider.GetRequiredService<ILogger<CommandRouter>>();
 
     public async Task<int> RouteAsync(string[] args)
     {
@@ -23,10 +18,10 @@ public class CommandRouter
             return 1;
         }
 
-        var command = args[0].ToLower();
+        var command = args[0].ToLower(CultureInfo.InvariantCulture);
         var commandArgs = args.Skip(1).ToArray();
 
-        _logger.LogDebug($"Routing command: {command}");
+        _logger.LogDebug("Routing command: {Command}", command);
 
         try
         {
@@ -39,17 +34,18 @@ public class CommandRouter
                 Constants.Commands.Stop => await ExecuteCommandAsync<StopCommand>(c => c.ExecuteAsync()),
                 Constants.Commands.Status => await ExecuteCommandAsync<StatusCommand>(c => c.ExecuteAsync()),
                 Constants.Commands.Command => await ExecuteCommandAsync<CommandCommand>(c => c.ExecuteAsync(commandArgs)),
-                _ => HandleUnknownCommand(command)
+                _ => HandleUnknownCommand(command),
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Command '{command}' failed with exception");
+            _logger.LogError(ex, "Command '{Command}' failed with exception", command);
             throw;
         }
     }
 
-    private async Task<int> ExecuteCommandAsync<TCommand>(Func<TCommand, Task<int>> executeFunc) where TCommand : class
+    private async Task<int> ExecuteCommandAsync<TCommand>(Func<TCommand, Task<int>> executeFunc)
+        where TCommand : class
     {
         var command = _serviceProvider.GetRequiredService<TCommand>();
         return await executeFunc(command);
@@ -57,7 +53,7 @@ public class CommandRouter
 
     private int HandleUnknownCommand(string command)
     {
-        _logger.LogError($"Unknown command: {command}");
+        _logger.LogError("Unknown command: {Command}", command);
         Console.Error.WriteLine($"Unknown command: {command}");
         Console.Error.WriteLine("Valid commands: init, create, delete, start, stop, status, command");
         return 1;

@@ -1,32 +1,21 @@
-namespace DevPod.Provider.ACI.Commands;
-
 using DevPod.Provider.ACI.Models;
 using DevPod.Provider.ACI.Services;
 using Microsoft.Extensions.Logging;
 
-public class CreateCommand
+namespace DevPod.Provider.ACI.Commands;
+
+public class CreateCommand(
+    ILogger<CreateCommand> logger,
+    IProviderOptionsService optionsService,
+    IAciService aciService)
 {
-    private readonly ILogger<CreateCommand> _logger;
-    private readonly IProviderOptionsService _optionsService;
-    private readonly IAciService _aciService;
-
-    public CreateCommand(
-        ILogger<CreateCommand> logger,
-        IProviderOptionsService optionsService,
-        IAciService aciService)
-    {
-        _logger = logger;
-        _optionsService = optionsService;
-        _aciService = aciService;
-    }
-
     public async Task<int> ExecuteAsync()
     {
-        _logger.LogInformation("Creating Azure Container Instance");
+        logger.LogInformation("Creating Azure Container Instance");
 
         try
         {
-            var options = _optionsService.GetOptions();
+            var options = optionsService.GetOptions();
 
             // Get workspace info from environment
             var workspaceImage = Environment.GetEnvironmentVariable("WORKSPACE_IMAGE") ?? "mcr.microsoft.com/devcontainers/base:ubuntu";
@@ -42,12 +31,12 @@ public class CreateCommand
                 MemoryGb = options.AciMemoryGb,
                 GpuCount = options.AciGpuCount,
                 RestartPolicy = options.AciRestartPolicy,
-                DnsNameLabel = options.AciDnsLabel
+                DnsNameLabel = options.AciDnsLabel,
             };
 
             // Add environment variables
             definition.EnvironmentVariables["DEVPOD_AGENT_PATH"] = options.AgentPath;
-            definition.EnvironmentVariables["WORKSPACE_SOURCE"] = workspaceSource ?? "";
+            definition.EnvironmentVariables["WORKSPACE_SOURCE"] = workspaceSource ?? string.Empty;
 
             if (options.InjectGitCredentials)
             {
@@ -67,7 +56,7 @@ public class CreateCommand
                 {
                     Server = options.AcrServer,
                     Username = options.AcrUsername!,
-                    Password = options.AcrPassword! //todo ensure it follows security best practices!
+                    Password = options.AcrPassword!, // todo ensure it follows security best practices!
                 };
             }
 
@@ -80,7 +69,7 @@ public class CreateCommand
                     ShareName = options.AciFileShareName!,
                     StorageAccountName = options.AciStorageAccountName,
                     StorageAccountKey = options.AciStorageAccountKey!,
-                    MountPath = "/workspace"
+                    MountPath = "/workspace",
                 };
             }
 
@@ -92,7 +81,7 @@ public class CreateCommand
                 definition.NetworkProfile = new NetworkProfile
                 {
                     VnetName = options.AciVnetName,
-                    SubnetName = options.AciSubnetName!
+                    SubnetName = options.AciSubnetName!,
                 };
             }
 
@@ -100,9 +89,9 @@ public class CreateCommand
             definition.Ports.Add(22);
 
             // Create the container group
-            var status = await _aciService.CreateContainerGroupAsync(definition);
+            var status = await aciService.CreateContainerGroupAsync(definition);
 
-            _logger.LogInformation($"Container group created: {status.Name}");
+            logger.LogInformation("Container group created: {ContainerGroupName}", status.Name);
             Console.WriteLine($"###START_CONTAINER###");
             Console.WriteLine($"Name: {status.Name}");
             Console.WriteLine($"Status: {status.State}");
@@ -110,17 +99,19 @@ public class CreateCommand
             {
                 Console.WriteLine($"FQDN: {status.Fqdn}");
             }
+
             if (!string.IsNullOrEmpty(status.IpAddress))
             {
                 Console.WriteLine($"IP: {status.IpAddress}");
             }
+
             Console.WriteLine($"###END_CONTAINER###");
 
             return 0;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create container group");
+            logger.LogError(ex, "Failed to create container group");
             Console.Error.WriteLine($"Create failed: {ex.Message}),", ex);
             return 1;
         }

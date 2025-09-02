@@ -3,29 +3,24 @@ using Microsoft.Extensions.Logging;
 
 namespace DevPod.Provider.ACI.Services;
 
-public class ProviderOptionsService : IProviderOptionsService
+public class ProviderOptionsService(ILogger<ProviderOptionsService> logger) : IProviderOptionsService
 {
-    private readonly ILogger<ProviderOptionsService> _logger;
     private ProviderOptions? _cachedOptions;
-
-    public ProviderOptionsService(ILogger<ProviderOptionsService> logger)
-    {
-        _logger = logger;
-    }
 
     public ProviderOptions GetOptions()
     {
         if (_cachedOptions == null)
         {
             _cachedOptions = ProviderOptions.FromEnvironment();
-            _logger.LogDebug("Loaded provider options from environment");
+            logger.LogDebug("Loaded provider options from environment");
         }
+
         return _cachedOptions;
     }
 
     public bool ValidateOptions(ProviderOptions options, out List<string> errors)
     {
-        errors = new List<string>();
+        errors = [];
 
         // Validate required Azure settings
         if (string.IsNullOrEmpty(options.AzureSubscriptionId))
@@ -44,12 +39,12 @@ public class ProviderOptionsService : IProviderOptionsService
         }
 
         // Validate resource constraints
-        if (options.AciCpuCores < 0.25 || options.AciCpuCores > 4)
+        if (options.AciCpuCores is < 0.25 or > 4)
         {
             errors.Add("ACI_CPU_CORES must be between 0.25 and 4");
         }
 
-        if (options.AciMemoryGb < 0.5 || options.AciMemoryGb > 16)
+        if (options.AciMemoryGb is < 0.5 or > 16)
         {
             errors.Add("ACI_MEMORY_GB must be between 0.5 and 16");
         }

@@ -11,5 +11,5 @@ public interface IAciService
     Task<ContainerStatus> StopContainerGroupAsync(string name);
     Task<string> ExecuteCommandAsync(string containerGroupName, string command);
     Task<string> GetContainerLogsAsync(string containerGroupName, string containerName);
-    Task<(string fqdn, string ipAddress)> GetContainerEndpointAsync(string name);
+    Task<(string Fqdn, string IpAddress)> GetContainerEndpointAsync(string name);
 }

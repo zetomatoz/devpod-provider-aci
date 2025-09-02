@@ -4,7 +4,7 @@ public static class Constants
 {
     public const string ProviderName = "azure-container-instance";
     public const string ProviderVersion = "0.1.0";
-    
+
     public static class Commands
     {
         public const string Init = "init";
@@ -15,7 +15,7 @@ public static class Constants
         public const string Status = "status";
         public const string Command = "command";
     }
-    
+
     public static class EnvironmentVariables
     {
         public const string DevPodDebug = "DEVPOD_DEBUG";
@@ -27,7 +27,7 @@ public static class Constants
         public const string WorkspaceSource = "WORKSPACE_SOURCE";
         public const string Command = "COMMAND";
     }
-    
+
     public static class Defaults
     {
         public const string ResourceGroupName = "devpod-aci-rg";

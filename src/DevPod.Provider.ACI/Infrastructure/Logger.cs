@@ -1,24 +1,24 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
+
 namespace DevPod.Provider.ACI.Infrastructure;
 
-using Microsoft.Extensions.Logging;
-
-//todo Adjust looging using Serilog
+// todo Adjust looging using Serilog
 public static class Logger
 {
     public static void ConfigureLogging(ILoggingBuilder builder)
     {
         builder.ClearProviders();
-        
-        // Add console logger with custom format
-        builder.AddConsole(options =>
+
+        builder.AddSimpleConsole(options =>
         {
-            options.DisableColors = false;
+            options.ColorBehavior = LoggerColorBehavior.Enabled;
             options.IncludeScopes = true;
         });
 
         // Set log level based on debug mode
         var debugMode = Environment.GetEnvironmentVariable(Constants.EnvironmentVariables.DevPodDebug);
-        if (!string.IsNullOrEmpty(debugMode) && debugMode.ToLower() == "true")
+        if (!string.IsNullOrEmpty(debugMode) && debugMode.Equals("true", StringComparison.OrdinalIgnoreCase))
         {
             builder.SetMinimumLevel(LogLevel.Debug);
             builder.AddFilter("Azure", LogLevel.Debug);
