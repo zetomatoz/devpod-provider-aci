@@ -131,7 +131,7 @@ public class AciService : IAciService
         throw new InvalidOperationException($"Container group not found: {containerGroupName}");
 
         // Get the first container in the group
-        var containerName = containerGroup.Data.Containers.First().Name;
+        _ = containerGroup.Data.Containers.First().Name;
 
         // Execute command via exec endpoint
         // Note: Direct exec API is not available in this SDK version
@@ -380,12 +380,7 @@ public class AciService : IAciService
             return "Stopped";
         }
 
-        if (containerStates.Any(s => s == "Waiting"))
-        {
-            return "Pending";
-        }
-
-        return "Unknown";
+        return containerStates.Any(s => s == "Waiting") ? "Pending" : "Unknown";
     }
 
     private static async Task<string> ExecuteViaSSHAsync(ContainerGroupData containerGroup, string command)

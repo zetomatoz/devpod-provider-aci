@@ -1,7 +1,7 @@
-using DevPod.Provider.ACI.Services;
-using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Text.Json;
+using DevPod.Provider.ACI.Services;
+using Microsoft.Extensions.Logging;
 
 namespace DevPod.Provider.ACI.Commands;
 
