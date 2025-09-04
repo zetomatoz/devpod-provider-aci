@@ -4,7 +4,10 @@
       "Bash(claude doctor)",
       "Bash(claude doctor:*)",
       "Bash(dotnet build:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(dotnet format:*)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet --list-sdks)"
     ],
     "deny": [],
     "ask": []
