@@ -1,0 +1,37 @@
+using System.Reflection;
+using Azure;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace DevPod.Provider.ACI.Tests;
+
+public class AciServiceTransientErrorsTests
+{
+    [Fact]
+    public void IsTransientError_ReturnsExpectedForStatusCodes()
+    {
+        var optionsMock = new Mock<IProviderOptionsService>();
+        var authMock = new Mock<IAuthenticationService>();
+        var svc = new DevPod.Provider.ACI.Services.AciService(
+            NullLogger<DevPod.Provider.ACI.Services.AciService>.Instance,
+            authMock.Object,
+            optionsMock.Object);
+
+        var method = typeof(DevPod.Provider.ACI.Services.AciService).GetMethod(
+            "IsTransientError",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        method.Should().NotBeNull();
+
+        bool Invoke(int status)
+        {
+            var ex = new RequestFailedException(status, "msg", null, null);
+            return (bool)method!.Invoke(svc, new object[] { ex })!;
+        }
+
+        Invoke(429).Should().BeTrue();
+        Invoke(503).Should().BeTrue();
+        Invoke(504).Should().BeTrue();
+        Invoke(500).Should().BeFalse();
+        Invoke(404).Should().BeFalse();
+    }
+}
+

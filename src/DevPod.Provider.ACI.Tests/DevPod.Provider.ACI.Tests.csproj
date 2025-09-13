@@ -5,6 +5,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>DevPod.Provider.ACI.Tests</RootNamespace>
+    <!-- Exclude host wiring from coverage to focus on core logic -->
+    <ExcludeByFile>**/Program.cs</ExcludeByFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +28,8 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers" />
+    <PackageReference Include="Azure.Core" />
+    <PackageReference Include="Azure.ResourceManager.ContainerInstance" />
   </ItemGroup>
 
   <ItemGroup>

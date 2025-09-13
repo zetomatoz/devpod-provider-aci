@@ -9,8 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{F5C4
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{208BA388-4CEE-2CBF-559C-5607C099C1F8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "hack", "hack", "{884DC97D-16C0-A837-A80B-61EDBF8B3C0B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevPod.Provider.ACI", "src\DevPod.Provider.ACI\DevPod.Provider.ACI.csproj", "{0E601294-6F9E-432B-BC34-639A7D414D32}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevPod.Provider.ACI.Tests", "src\DevPod.Provider.ACI.Tests\DevPod.Provider.ACI.Tests.csproj", "{AD25CA0B-DDDE-4C2C-B1B6-214021B41194}"
