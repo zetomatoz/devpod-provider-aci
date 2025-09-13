@@ -1,0 +1,61 @@
+// File: samples/dotnet-hello-world/.devcontainer/devcontainer.json
+{
+  "name": ".NET 8 Hello World",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:8.0",
+  
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "dotnet.defaultSolution": "HelloWorld.sln"
+      },
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.powershell",
+        "redhat.vscode-yaml",
+        "EditorConfig.EditorConfig"
+      ]
+    }
+  },
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally
+  "forwardPorts": [5000, 5001],
+
+  // Use 'postCreateCommand' to run commands after the container is created
+  "postCreateCommand": "dotnet restore && dotnet build",
+
+  // Set environment variables
+  "containerEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "DOTNET_WATCH_SUPPRESS_MSBUILD_INCREMENTALISM": "true"
+  },
+
+  // Mount workspace at /workspace
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+
+  // Run as non-root user
+  "remoteUser": "vscode",
+
+  // Add capabilities for debugging
+  "capAdd": ["SYS_PTRACE"],
+  "securityOpt": ["seccomp=unconfined"]
+}
