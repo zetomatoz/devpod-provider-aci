@@ -27,6 +27,11 @@ public class ProviderOptions
     public string? AcrServer { get; set; }
     public string? AcrUsername { get; set; }
     public string? AcrPassword { get; set; }
+    public string AcrAuthMode { get; set; } = "ManagedIdentity"; // ManagedIdentity | KeyVault | UsernamePassword
+    public string? UserAssignedIdentityResourceId { get; set; }
+    public string? KeyVaultUri { get; set; }
+    public string? AcrUsernameSecretName { get; set; }
+    public string? AcrPasswordSecretName { get; set; }
 
     // Storage Configuration
     public string? AciStorageAccountName { get; set; }
@@ -89,6 +94,11 @@ public class ProviderOptions
         options.AcrServer = Environment.GetEnvironmentVariable("ACR_SERVER");
         options.AcrUsername = Environment.GetEnvironmentVariable("ACR_USERNAME");
         options.AcrPassword = Environment.GetEnvironmentVariable("ACR_PASSWORD");
+        options.AcrAuthMode = Environment.GetEnvironmentVariable("ACR_AUTH_MODE") ?? options.AcrAuthMode;
+        options.UserAssignedIdentityResourceId = Environment.GetEnvironmentVariable("USER_ASSIGNED_IDENTITY_RESOURCE_ID");
+        options.KeyVaultUri = Environment.GetEnvironmentVariable("KEYVAULT_URI");
+        options.AcrUsernameSecretName = Environment.GetEnvironmentVariable("ACR_USERNAME_SECRET_NAME");
+        options.AcrPasswordSecretName = Environment.GetEnvironmentVariable("ACR_PASSWORD_SECRET_NAME");
 
         // Storage Configuration
         options.AciStorageAccountName = Environment.GetEnvironmentVariable("ACI_STORAGE_ACCOUNT_NAME");

@@ -107,6 +107,19 @@ options:
     description: Azure Container Registry server URL (e.g., myregistry.azurecr.io)
     required: false
   
+  ACR_AUTH_MODE:
+    description: Registry auth mode (ManagedIdentity recommended)
+    required: false
+    default: ManagedIdentity
+    suggestions:
+    - ManagedIdentity
+    - KeyVault
+    - UsernamePassword
+  
+  USER_ASSIGNED_IDENTITY_RESOURCE_ID:
+    description: Resource ID of a user-assigned managed identity (optional)
+    required: false
+  
   ACR_USERNAME:
     description: Azure Container Registry username
     required: false
@@ -115,6 +128,18 @@ options:
     description: Azure Container Registry password
     required: false
     password: true
+  
+  KEYVAULT_URI:
+    description: Azure Key Vault URI (required if ACR_AUTH_MODE=KeyVault)
+    required: false
+  
+  ACR_USERNAME_SECRET_NAME:
+    description: Key Vault secret name holding the ACR username (KeyVault mode)
+    required: false
+  
+  ACR_PASSWORD_SECRET_NAME:
+    description: Key Vault secret name holding the ACR password (KeyVault mode)
+    required: false
   
   # Storage Configuration
   ACI_STORAGE_ACCOUNT_NAME:
@@ -181,8 +206,13 @@ optionGroups:
   - name: Container Registry
     options:
     - ACR_SERVER
+    - ACR_AUTH_MODE
+    - USER_ASSIGNED_IDENTITY_RESOURCE_ID
     - ACR_USERNAME
     - ACR_PASSWORD
+    - KEYVAULT_URI
+    - ACR_USERNAME_SECRET_NAME
+    - ACR_PASSWORD_SECRET_NAME
     defaultVisible: false
   
   - name: Storage Configuration

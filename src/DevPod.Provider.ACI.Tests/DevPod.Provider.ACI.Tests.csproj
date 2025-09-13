@@ -29,6 +29,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers" />
     <PackageReference Include="Azure.Core" />
+    <PackageReference Include="Azure.ResourceManager" />
     <PackageReference Include="Azure.ResourceManager.ContainerInstance" />
   </ItemGroup>
 

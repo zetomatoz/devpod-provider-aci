@@ -3,6 +3,7 @@ using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.ContainerInstance.Models;
+using Azure.ResourceManager.Models;
 using Azure.ResourceManager.Resources;
 using DevPod.Provider.ACI.Models;
 using Microsoft.Extensions.Logging;
@@ -257,14 +258,31 @@ public class AciService : IAciService
             RestartPolicy = Enum.Parse<ContainerGroupRestartPolicy>(definition.RestartPolicy, true),
         };
 
-        // Add registry credentials if provided
-        if (definition.RegistryCredentials != null)
+        // Configure identity for ACR pull if using Managed Identity
+        var acrAuthMode = (options.AcrAuthMode ?? "ManagedIdentity").Trim();
+        if (acrAuthMode.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(options.UserAssignedIdentityResourceId))
+            {
+                containerGroupData.Identity = new ManagedServiceIdentity(ManagedServiceIdentityType.UserAssigned);
+                containerGroupData.Identity.UserAssignedIdentities.Add(
+                    new ResourceIdentifier(options.UserAssignedIdentityResourceId),
+                    new UserAssignedIdentity());
+            }
+            else
+            {
+                containerGroupData.Identity = new ManagedServiceIdentity(ManagedServiceIdentityType.SystemAssigned);
+            }
+        }
+
+        // Add registry credentials if provided (not needed for Managed Identity)
+        if (!acrAuthMode.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase) && definition.RegistryCredentials != null)
         {
             containerGroupData.ImageRegistryCredentials.Add(new ContainerGroupImageRegistryCredential(
                 definition.RegistryCredentials.Server)
             {
                 Username = definition.RegistryCredentials.Username,
-                Password = definition.RegistryCredentials.Password, // todo double check it follows security best practices
+                Password = definition.RegistryCredentials.Password,
             });
         }
 

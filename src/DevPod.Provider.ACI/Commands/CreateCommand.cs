@@ -7,7 +7,8 @@ namespace DevPod.Provider.ACI.Commands;
 public class CreateCommand(
     ILogger<CreateCommand> logger,
     IProviderOptionsService optionsService,
-    IAciService aciService)
+    IAciService aciService,
+    ISecretService secretService)
 {
     public async Task<int> ExecuteAsync()
     {
@@ -49,15 +50,43 @@ public class CreateCommand(
                 }
             }
 
-            // Configure registry credentials if provided
+            // Configure registry authentication if ACR is specified
             if (!string.IsNullOrEmpty(options.AcrServer))
             {
-                definition.RegistryCredentials = new ContainerRegistryCredentials
+                var mode = (options.AcrAuthMode ?? "ManagedIdentity").Trim();
+                if (mode.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
                 {
-                    Server = options.AcrServer,
-                    Username = options.AcrUsername!,
-                    Password = options.AcrPassword!, // todo ensure it follows security best practices!
-                };
+                    // Secretless pull via ACI managed identity. Ensure identity is configured in ACI service.
+                    logger.LogInformation("Using Managed Identity for ACR authentication");
+                }
+                else if (mode.Equals("KeyVault", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogInformation("Fetching ACR credentials from Key Vault");
+                    var username = await secretService.GetAsync(options.AcrUsernameSecretName!);
+                    var password = await secretService.GetAsync(options.AcrPasswordSecretName!);
+
+                    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+                    {
+                        throw new InvalidOperationException("Failed to retrieve ACR credentials from Key Vault");
+                    }
+
+                    definition.RegistryCredentials = new ContainerRegistryCredentials
+                    {
+                        Server = options.AcrServer,
+                        Username = username,
+                        Password = password,
+                    };
+                }
+                else
+                {
+                    // Username/Password mode (env-based or provided via options)
+                    definition.RegistryCredentials = new ContainerRegistryCredentials
+                    {
+                        Server = options.AcrServer,
+                        Username = options.AcrUsername!,
+                        Password = options.AcrPassword!,
+                    };
+                }
             }
 
             // Configure storage if provided
@@ -112,7 +141,7 @@ public class CreateCommand(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create container group");
-            Console.Error.WriteLine($"Create failed: {ex.Message}),", ex);
+            Console.Error.WriteLine($"Create failed: {ex.Message}");
             return 1;
         }
     }

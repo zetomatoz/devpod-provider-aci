@@ -21,6 +21,7 @@ public class CommandHandlersTests
         services.AddLogging();
 
         services
+            .AddSingleton(new Mock<ISecretService>().Object)
             .AddSingleton(optionsMock.Object)
             .AddSingleton(authMock.Object)
             .AddSingleton(aciMock.Object)

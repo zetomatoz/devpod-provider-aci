@@ -18,6 +18,17 @@
           "System.Threading.Tasks.Extensions": "4.5.4"
         }
       },
+      "Azure.ResourceManager": {
+        "type": "Direct",
+        "requested": "[1.11.0, )",
+        "resolved": "1.11.0",
+        "contentHash": "kDgY6jw1LMqQJXO9H+Q6huZiKU1Ctt79wjNDu3etEob/NlOGGCNuQX5tyTm+iOZh17XMFKmTY7c+bT3bYu5uVw==",
+        "dependencies": {
+          "Azure.Core": "1.38.0",
+          "System.ClientModel": "1.0.0",
+          "System.Text.Json": "4.7.2"
+        }
+      },
       "Azure.ResourceManager.ContainerInstance": {
         "type": "Direct",
         "requested": "[1.2.0, )",
@@ -459,6 +470,7 @@
           "Azure.ResourceManager.Network": "[1.6.0, )",
           "Azure.ResourceManager.Resources": "[1.7.0, )",
           "Azure.ResourceManager.Storage": "[1.2.0, )",
+          "Azure.Security.KeyVault.Secrets": "[4.6.0, )",
           "Azure.Storage.Files.Shares": "[12.17.0, )",
           "Microsoft.Extensions.Configuration": "[8.0.0, )",
           "Microsoft.Extensions.Configuration.Binder": "[8.0.0, )",
@@ -488,17 +500,6 @@
           "System.Security.Cryptography.ProtectedData": "4.7.0",
           "System.Text.Json": "4.7.2",
           "System.Threading.Tasks.Extensions": "4.5.4"
-        }
-      },
-      "Azure.ResourceManager": {
-        "type": "CentralTransitive",
-        "requested": "[1.11.0, )",
-        "resolved": "1.11.0",
-        "contentHash": "kDgY6jw1LMqQJXO9H+Q6huZiKU1Ctt79wjNDu3etEob/NlOGGCNuQX5tyTm+iOZh17XMFKmTY7c+bT3bYu5uVw==",
-        "dependencies": {
-          "Azure.Core": "1.38.0",
-          "System.ClientModel": "1.0.0",
-          "System.Text.Json": "4.7.2"
         }
       },
       "Azure.ResourceManager.Network": {
@@ -532,6 +533,18 @@
           "Azure.Core": "1.36.0",
           "Azure.ResourceManager": "1.9.0",
           "System.Text.Json": "4.7.2"
+        }
+      },
+      "Azure.Security.KeyVault.Secrets": {
+        "type": "CentralTransitive",
+        "requested": "[4.6.0, )",
+        "resolved": "4.6.0",
+        "contentHash": "vwPceoznuT6glvirZcXlaCQrh1uzTSxpZUi2hRFNumHiS3hVyqIXI5fgWiLtlBzwqPJMTr0flUoSvGKjXXQlfg==",
+        "dependencies": {
+          "Azure.Core": "1.37.0",
+          "System.Memory": "4.5.4",
+          "System.Text.Json": "4.7.2",
+          "System.Threading.Tasks.Extensions": "4.5.4"
         }
       },
       "Azure.Storage.Files.Shares": {

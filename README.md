@@ -51,3 +51,18 @@ devpod provider add ./provider.yaml --name aci-local
 ## 🛠️ Development
 
 For detailed development setup, building instructions, and project structure, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## 🔐 Registry Authentication
+
+- Recommended: Managed Identity (secretless)
+  - Set `ACR_AUTH_MODE=ManagedIdentity` (default).
+  - Optionally set `USER_ASSIGNED_IDENTITY_RESOURCE_ID` to use a user-assigned identity; otherwise a system-assigned identity is used.
+  - Grant the identity `AcrPull` on your ACR.
+- Alternative: Key Vault backed secrets
+  - Set `ACR_AUTH_MODE=KeyVault`, `KEYVAULT_URI`, `ACR_USERNAME_SECRET_NAME`, and `ACR_PASSWORD_SECRET_NAME`.
+  - Credentials are fetched at runtime with `DefaultAzureCredential` and never logged.
+- Fallback: Username/Password
+  - Set `ACR_AUTH_MODE=UsernamePassword` with `ACR_USERNAME` and `ACR_PASSWORD`.
+  - Prefer ACR tokens scoped to specific repositories over admin credentials and rotate regularly.
+
+Note: Secretless pull via Managed Identity is the most secure and operationally simple option when using Azure Container Registry.

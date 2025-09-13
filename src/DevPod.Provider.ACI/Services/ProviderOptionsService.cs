@@ -55,12 +55,32 @@ public class ProviderOptionsService(ILogger<ProviderOptionsService> logger) : IP
             errors.Add("ACI_SUBNET_NAME is required when ACI_VNET_NAME is specified");
         }
 
-        // Validate registry credentials if provided
+        // Validate registry configuration if provided
         if (!string.IsNullOrEmpty(options.AcrServer))
         {
-            if (string.IsNullOrEmpty(options.AcrUsername) || string.IsNullOrEmpty(options.AcrPassword))
+            var mode = (options.AcrAuthMode ?? "ManagedIdentity").Trim();
+            switch (mode.ToLowerInvariant())
             {
-                errors.Add("ACR_USERNAME and ACR_PASSWORD are required when ACR_SERVER is specified");
+                case "managedidentity":
+                    // No username/password required. If user-assigned identity is provided, assume valid.
+                    break;
+                case "keyvault":
+                    if (string.IsNullOrEmpty(options.KeyVaultUri))
+                    {
+                        errors.Add("KEYVAULT_URI is required when ACR_AUTH_MODE is KeyVault");
+                    }
+                    if (string.IsNullOrEmpty(options.AcrUsernameSecretName) || string.IsNullOrEmpty(options.AcrPasswordSecretName))
+                    {
+                        errors.Add("ACR_USERNAME_SECRET_NAME and ACR_PASSWORD_SECRET_NAME are required when ACR_AUTH_MODE is KeyVault");
+                    }
+                    break;
+                case "usernamepassword":
+                default:
+                    if (string.IsNullOrEmpty(options.AcrUsername) || string.IsNullOrEmpty(options.AcrPassword))
+                    {
+                        errors.Add("ACR_USERNAME and ACR_PASSWORD are required when ACR_AUTH_MODE is UsernamePassword");
+                    }
+                    break;
             }
         }
 

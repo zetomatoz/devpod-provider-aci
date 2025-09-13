@@ -134,7 +134,7 @@ public class ProviderOptionsServiceTests
     }
 
     [Fact]
-    public void ValidateOptions_AcrServerWithoutCreds_ReturnsError()
+    public void ValidateOptions_AcrServerWithoutCreds_ReturnsError_InUsernamePasswordMode()
     {
         var logger = NullLogger<ProviderOptionsService>.Instance;
         var svc = new ProviderOptionsService(logger);
@@ -148,12 +148,55 @@ public class ProviderOptionsServiceTests
             AcrServer = "example.azurecr.io",
             AcrUsername = null,
             AcrPassword = null,
+            AcrAuthMode = "UsernamePassword",
         };
 
         var valid = svc.ValidateOptions(options, out var errors);
         valid.Should().BeFalse();
         errors.Should().Contain(e => e.Contains("ACR_USERNAME"));
         errors.Should().Contain(e => e.Contains("ACR_PASSWORD"));
+    }
+
+    [Fact]
+    public void ValidateOptions_AcrServer_NoCreds_Ok_InManagedIdentityMode()
+    {
+        var svc = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var options = new ProviderOptions
+        {
+            AzureSubscriptionId = "sub",
+            AzureResourceGroup = "rg",
+            AzureRegion = "eastus",
+            AciCpuCores = 1.0,
+            AciMemoryGb = 2.0,
+            AcrServer = "example.azurecr.io",
+            AcrAuthMode = "ManagedIdentity",
+        };
+
+        var valid = svc.ValidateOptions(options, out var errors);
+        valid.Should().BeTrue();
+        errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateOptions_AcrServer_KeyVaultMode_RequiresVaultAndSecretNames()
+    {
+        var svc = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var options = new ProviderOptions
+        {
+            AzureSubscriptionId = "sub",
+            AzureResourceGroup = "rg",
+            AzureRegion = "eastus",
+            AciCpuCores = 1.0,
+            AciMemoryGb = 2.0,
+            AcrServer = "example.azurecr.io",
+            AcrAuthMode = "KeyVault",
+        };
+
+        var valid = svc.ValidateOptions(options, out var errors);
+        valid.Should().BeFalse();
+        errors.Should().Contain(e => e.Contains("KEYVAULT_URI"));
+        errors.Should().Contain(e => e.Contains("ACR_USERNAME_SECRET_NAME"));
+        errors.Should().Contain(e => e.Contains("ACR_PASSWORD_SECRET_NAME"));
     }
 
     [Fact]
@@ -177,4 +220,3 @@ public class ProviderOptionsServiceTests
         errors.Should().Contain(e => e.Contains("ACI_STORAGE_ACCOUNT_KEY"));
     }
 }
-
