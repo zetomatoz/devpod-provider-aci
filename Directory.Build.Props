@@ -52,6 +52,9 @@
     
     <!-- Runtime Identifiers for Cross-Platform Builds -->
     <RuntimeIdentifiers>linux-x64;linux-arm64;osx-x64;osx-arm64;win-x64</RuntimeIdentifiers>
+
+    <!-- NuGet lock files for reproducible restores and CI caching -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <!-- Configuration-specific properties -->
