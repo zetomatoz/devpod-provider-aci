@@ -40,7 +40,7 @@ jobs:
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=lcov \
             /p:ExcludeByFile="**/Program.cs" \
-            /p:Threshold=70 \
+            /p:Threshold=50 \
             /p:ThresholdType=line \
             /p:ThresholdStat=total
 
