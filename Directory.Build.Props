@@ -55,6 +55,9 @@
 
     <!-- NuGet lock files for reproducible restores and CI caching -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+
+    <!-- Enforce exact versions from lockfiles during CI restores -->
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 
   <!-- Configuration-specific properties -->
