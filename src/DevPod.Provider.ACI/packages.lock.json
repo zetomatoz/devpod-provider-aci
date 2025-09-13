@@ -4,13 +4,13 @@
     "net8.0": {
       "Azure.Identity": {
         "type": "Direct",
-        "requested": "[1.11.0, )",
-        "resolved": "1.11.0",
-        "contentHash": "JcpkMpW8Wx/XfQfMiSc9ecdIy0GhdpsMCT3Lh8EJZQ/NN6OxPeY7OAcfmucsvdfrldbFJd04m+Kfd+1QILBAgg==",
+        "requested": "[1.11.4, )",
+        "resolved": "1.11.4",
+        "contentHash": "Sf4BoE6Q3jTgFkgBkx7qztYOFELBCo+wQgpYDwal/qJ1unBH73ywPztIJKXBXORRzAeNijsuxhk94h0TIMvfYg==",
         "dependencies": {
           "Azure.Core": "1.38.0",
-          "Microsoft.Identity.Client": "4.60.1",
-          "Microsoft.Identity.Client.Extensions.Msal": "4.60.1",
+          "Microsoft.Identity.Client": "4.61.3",
+          "Microsoft.Identity.Client.Extensions.Msal": "4.61.3",
           "System.Memory": "4.5.4",
           "System.Security.Cryptography.ProtectedData": "4.7.0",
           "System.Text.Json": "4.7.2",
@@ -252,12 +252,9 @@
       },
       "System.Text.Json": {
         "type": "Direct",
-        "requested": "[8.0.3, )",
-        "resolved": "8.0.3",
-        "contentHash": "hpagS9joOwv6efWfrMmV9MjQXpiXZH72PgN067Ysfr6AWMSD1/1hEcvh/U5mUpPLezEWsOJSuVrmqDIVD958iA==",
-        "dependencies": {
-          "System.Text.Encodings.Web": "8.0.0"
-        }
+        "requested": "[8.0.6, )",
+        "resolved": "8.0.6",
+        "contentHash": "BvSpVBsVN9b+Y+wONbvJOHd1HjXQf33+XiC28ZMOwRsYb42mz3Q8YHnpTSwpwJLqYCMqM+0UUVC3V+pi25XfkQ=="
       },
       "Azure.Storage.Common": {
         "type": "Transitive",
@@ -376,8 +373,8 @@
       },
       "Microsoft.Identity.Client": {
         "type": "Transitive",
-        "resolved": "4.60.1",
-        "contentHash": "rC+qiskr8RKq2a43hH55vuDRz4Wto+bxwxMrKzCIOann1NL0OFFTjEk4ZVnTTBdijVWC6mhOaSmdV1H6J6bXmA==",
+        "resolved": "4.61.3",
+        "contentHash": "naJo/Qm35Caaoxp5utcw+R8eU8ZtLz2ALh8S+gkekOYQ1oazfCQMWVT4NJ/FnHzdIJlm8dMz0oMpMGCabx5odA==",
         "dependencies": {
           "Microsoft.IdentityModel.Abstractions": "6.35.0",
           "System.Diagnostics.DiagnosticSource": "6.0.1"
@@ -385,10 +382,10 @@
       },
       "Microsoft.Identity.Client.Extensions.Msal": {
         "type": "Transitive",
-        "resolved": "4.60.1",
-        "contentHash": "EdPcGqvruFzNBcW+/3DSP4vNmLNYXSSnngj+QecAxmy6VRnvA7kt5KE2bU8qQmt4KkOitNHBVYVwze2XkqOLxw==",
+        "resolved": "4.61.3",
+        "contentHash": "PWnJcznrSGr25MN8ajlc2XIDW4zCFu0U6FkpaNLEWLgd1NgFCp5uDY3mqLDgM8zCN8hqj8yo5wHYfLB2HjcdGw==",
         "dependencies": {
-          "Microsoft.Identity.Client": "4.60.1",
+          "Microsoft.Identity.Client": "4.61.3",
           "System.Security.Cryptography.ProtectedData": "4.5.0"
         }
       },
@@ -467,8 +464,8 @@
       },
       "System.Text.Encodings.Web": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
+        "resolved": "4.7.2",
+        "contentHash": "iTUgB/WtrZ1sWZs84F2hwyQhiRH6QNjQv2DkwrH+WP6RoFga2Q1m3f9/Q7FG8cck8AdHitQkmkXSY8qylcDmuA=="
       },
       "System.Threading.Tasks.Extensions": {
         "type": "Transitive",
@@ -586,11 +583,6 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "ehYW0m9ptxpGWvE4zgqongBVWpSDU/JCFD4K7krxkQwSz/sFQjEXCUqpvencjy6DYDbn7Ig09R8GFffu8TtneQ=="
-      },
-      "System.Text.Encodings.Web": {
-        "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
       }
     },
     "net8.0/linux-x64": {
@@ -603,11 +595,6 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "ehYW0m9ptxpGWvE4zgqongBVWpSDU/JCFD4K7krxkQwSz/sFQjEXCUqpvencjy6DYDbn7Ig09R8GFffu8TtneQ=="
-      },
-      "System.Text.Encodings.Web": {
-        "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
       }
     },
     "net8.0/osx-arm64": {
@@ -620,11 +607,6 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "ehYW0m9ptxpGWvE4zgqongBVWpSDU/JCFD4K7krxkQwSz/sFQjEXCUqpvencjy6DYDbn7Ig09R8GFffu8TtneQ=="
-      },
-      "System.Text.Encodings.Web": {
-        "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
       }
     },
     "net8.0/osx-x64": {
@@ -637,11 +619,6 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "ehYW0m9ptxpGWvE4zgqongBVWpSDU/JCFD4K7krxkQwSz/sFQjEXCUqpvencjy6DYDbn7Ig09R8GFffu8TtneQ=="
-      },
-      "System.Text.Encodings.Web": {
-        "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
       }
     },
     "net8.0/win-x64": {
@@ -654,11 +631,6 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "ehYW0m9ptxpGWvE4zgqongBVWpSDU/JCFD4K7krxkQwSz/sFQjEXCUqpvencjy6DYDbn7Ig09R8GFffu8TtneQ=="
-      },
-      "System.Text.Encodings.Web": {
-        "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
       }
     }
   }

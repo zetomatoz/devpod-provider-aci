@@ -11,12 +11,12 @@ public class AciServiceTransientErrorsTests
     {
         var optionsMock = new Mock<IProviderOptionsService>();
         var authMock = new Mock<IAuthenticationService>();
-        var svc = new DevPod.Provider.ACI.Services.AciService(
-            NullLogger<DevPod.Provider.ACI.Services.AciService>.Instance,
+        var svc = new AciService(
+            NullLogger<AciService>.Instance,
             authMock.Object,
             optionsMock.Object);
 
-        var method = typeof(DevPod.Provider.ACI.Services.AciService).GetMethod(
+        var method = typeof(AciService).GetMethod(
             "IsTransientError",
             BindingFlags.NonPublic | BindingFlags.Instance);
         method.Should().NotBeNull();
@@ -24,7 +24,7 @@ public class AciServiceTransientErrorsTests
         bool Invoke(int status)
         {
             var ex = new RequestFailedException(status, "msg", null, null);
-            return (bool)method!.Invoke(svc, new object[] { ex })!;
+            return (bool)method!.Invoke(svc, [ex])!;
         }
 
         Invoke(429).Should().BeTrue();

@@ -1,4 +1,3 @@
-using Azure.Core;
 using Azure.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -24,7 +23,7 @@ public class AuthenticationServiceTests
             optionsSvc.Object);
 
         // Act
-        TokenCredential cred = svc.GetCredential();
+        var cred = svc.GetCredential();
 
         // Assert
         cred.Should().BeOfType<ClientSecretCredential>();
@@ -43,7 +42,7 @@ public class AuthenticationServiceTests
             optionsSvc.Object);
 
         // Act
-        TokenCredential cred = svc.GetCredential();
+        var cred = svc.GetCredential();
 
         // Assert
         cred.Should().BeOfType<DefaultAzureCredential>();

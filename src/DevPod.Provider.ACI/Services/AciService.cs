@@ -375,12 +375,7 @@ public class AciService : IAciService
             return "Running";
         }
 
-        if (containerStates.Any(s => s == "Terminated"))
-        {
-            return "Stopped";
-        }
-
-        return containerStates.Any(s => s == "Waiting") ? "Pending" : "Unknown";
+        return containerStates.Any(s => s == "Terminated") ? "Stopped" : containerStates.Any(s => s == "Waiting") ? "Pending" : "Unknown";
     }
 
     private static async Task<string> ExecuteViaSSHAsync(ContainerGroupData containerGroup, string command)

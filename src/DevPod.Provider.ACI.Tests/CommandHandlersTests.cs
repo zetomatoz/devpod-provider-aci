@@ -21,9 +21,9 @@ public class CommandHandlersTests
         services.AddLogging();
 
         services
-            .AddSingleton<IProviderOptionsService>(optionsMock.Object)
-            .AddSingleton<IAuthenticationService>(authMock.Object)
-            .AddSingleton<IAciService>(aciMock.Object)
+            .AddSingleton(optionsMock.Object)
+            .AddSingleton(authMock.Object)
+            .AddSingleton(aciMock.Object)
             .AddTransient<InitCommand>()
             .AddTransient<CreateCommand>()
             .AddTransient<DeleteCommand>()
@@ -35,7 +35,7 @@ public class CommandHandlersTests
         return services.BuildServiceProvider();
     }
 
-    private static ProviderOptions DefaultOptions() => new ProviderOptions
+    private static ProviderOptions DefaultOptions() => new()
     {
         AzureSubscriptionId = "sub",
         AzureResourceGroup = "rg",
@@ -313,7 +313,7 @@ public class CommandHandlersTests
         optionsMock.Setup(o => o.ValidateOptions(It.IsAny<ProviderOptions>(), out It.Ref<List<string>>.IsAny))
             .Callback(new ValidateOptionsCallback((ProviderOptions _, out List<string> errors) =>
             {
-                errors = new List<string> { "err1", "err2" };
+                errors = ["err1", "err2"];
             }))
             .Returns(false);
 
@@ -338,4 +338,3 @@ public class CommandHandlersTests
 
     private delegate void ValidateOptionsCallback(ProviderOptions options, out List<string> errors);
 }
-

@@ -7,7 +7,7 @@
   <ItemGroup>
     <!-- Azure SDK Packages -->
     <PackageVersion Include="Azure.Core" Version="1.38.0" />
-    <PackageVersion Include="Azure.Identity" Version="1.11.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.11.4" />
     <PackageVersion Include="Azure.ResourceManager" Version="1.11.0" />
     <PackageVersion Include="Azure.ResourceManager.ContainerInstance" Version="1.2.0" />
     <PackageVersion Include="Azure.ResourceManager.Resources" Version="1.7.0" />
@@ -41,7 +41,7 @@
     <PackageVersion Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />
     
     <!-- Serialization -->
-    <PackageVersion Include="System.Text.Json" Version="8.0.3" />
+    <PackageVersion Include="System.Text.Json" Version="8.0.6" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     
     <!-- HTTP and Networking -->

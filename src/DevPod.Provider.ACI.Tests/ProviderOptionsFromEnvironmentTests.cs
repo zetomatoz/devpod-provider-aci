@@ -76,7 +76,7 @@ public class ProviderOptionsFromEnvironmentTests
 
     private sealed class EnvSnapshot : IDisposable
     {
-        private readonly Dictionary<string, string?> _saved = new();
+        private readonly Dictionary<string, string?> _saved = [];
 
         public void Clear(params string[] keys)
         {
