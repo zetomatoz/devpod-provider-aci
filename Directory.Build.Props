@@ -49,9 +49,6 @@
     
     <!-- Central Package Management -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    
-    <!-- Runtime Identifiers for Cross-Platform Builds -->
-    <RuntimeIdentifiers>linux-x64;linux-arm64;osx-x64;osx-arm64;win-x64</RuntimeIdentifiers>
 
     <!-- NuGet lock files for reproducible restores and CI caching -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -66,7 +63,8 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+  <!-- Release settings only for the provider project (avoid RID inference errors in tests/samples) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectName)' == 'DevPod.Provider.ACI'">
     <DefineConstants>$(DefineConstants);RELEASE;TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <PublishSingleFile>true</PublishSingleFile>
@@ -76,6 +74,11 @@
     <TrimMode>partial</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
+  <!-- Provider project specific runtime identifiers (do not include in lockfiles) -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DevPod.Provider.ACI'">
+    <RuntimeIdentifiers>linux-x64;linux-arm64;osx-x64;osx-arm64;win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <!-- Test Project Configuration -->

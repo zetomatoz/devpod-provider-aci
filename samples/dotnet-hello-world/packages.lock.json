@@ -74,11 +74,6 @@
         "resolved": "6.5.0",
         "contentHash": "OvbvxX+wL8skxTBttcBsVxdh73Fag4xwqEU2edh4JMn7Ws/xJHnY/JB1e9RoCb6XpDxUF3hD9A0Z1lEUx40Pfw=="
       }
-    },
-    "net8.0/linux-arm64": {},
-    "net8.0/linux-x64": {},
-    "net8.0/osx-arm64": {},
-    "net8.0/osx-x64": {},
-    "net8.0/win-x64": {}
+    }
   }
 }

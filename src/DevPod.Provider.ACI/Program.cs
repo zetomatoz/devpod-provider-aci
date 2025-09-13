@@ -39,10 +39,7 @@ catch (Exception ex)
 }
 finally
 {
-    if (serviceProvider is IDisposable disposable)
-    {
-        disposable.Dispose();
-    }
+    await serviceProvider.DisposeAsync();
 }
 
 void ConfigureServices(IServiceCollection services, IConfiguration configuration)
