@@ -29,7 +29,7 @@ jobs:
           cache-dependency-path: '**/packages.lock.json'
 
       - name: Restore
-        run: dotnet restore --locked-mode --force-evaluate DevPod.Provider.ACI.sln
+        run: dotnet restore --locked-mode DevPod.Provider.ACI.sln
 
       - name: Build
         run: dotnet build --no-restore --configuration Release DevPod.Provider.ACI.sln
