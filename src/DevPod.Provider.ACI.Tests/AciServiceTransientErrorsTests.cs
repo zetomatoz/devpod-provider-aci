@@ -11,10 +11,12 @@ public class AciServiceTransientErrorsTests
     {
         var optionsMock = new Mock<IProviderOptionsService>();
         var authMock = new Mock<IAuthenticationService>();
+        var wsFactory = new Mock<IWebSocketClientFactory>();
         var svc = new AciService(
             NullLogger<AciService>.Instance,
             authMock.Object,
-            optionsMock.Object);
+            optionsMock.Object,
+            wsFactory.Object);
 
         var method = typeof(AciService).GetMethod(
             "IsTransientError",
@@ -34,4 +36,3 @@ public class AciServiceTransientErrorsTests
         Invoke(404).Should().BeFalse();
     }
 }
-
