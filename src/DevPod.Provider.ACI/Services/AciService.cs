@@ -1,8 +1,23 @@
+using System;
 using System.Buffers;
 using System.Globalization;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
-
+using System.Threading;
+using System.Threading.Tasks;
+using Azure;
+using Azure.Core;
+using Azure.ResourceManager;
+using Azure.ResourceManager.ContainerInstance;
+using Azure.ResourceManager.ContainerInstance.Models;
+using Azure.ResourceManager.Models;
+using Azure.ResourceManager.Resources;
+using DevPod.Provider.ACI.Models;
+using DevPod.Provider.ACI.Infrastructure;
+using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 namespace DevPod.Provider.ACI.Services;
 
 public class AciService : IAciService
@@ -652,7 +667,7 @@ public class AciService : IAciService
         return null;
     }
 
-    private static string BuildExecCommand(string command)
+    private string BuildExecCommand(string command)
     {
         var scriptBuilder = new StringBuilder();
         scriptBuilder.AppendLine("set -o pipefail >/dev/null 2>&1 || true");
@@ -666,10 +681,10 @@ public class AciService : IAciService
         return $"/bin/sh -c '{escaped}'";
     }
 
-    private static string EscapeForSingleQuotedString(string value)
+    private string EscapeForSingleQuotedString(string value)
     {
-        // Consider adding a warning if the command contains suspicious patterns
-        if (command.Contains("'\"'\"'") || command.Contains("${"))
+        // Log a warning if the command contains suspicious patterns
+        if (value.Contains("'\"'\"'") || value.Contains("${"))
         {
             _logger.LogWarning("Command contains potentially problematic shell metacharacters");
         }
