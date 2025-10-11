@@ -75,6 +75,13 @@ export CHECKSUM_WINDOWS_AMD64
 
 export TEMPLATE_PATH OUTPUT_PATH
 
+for var in VERSION CHECKSUM_LINUX_AMD64 CHECKSUM_LINUX_ARM64 CHECKSUM_OSX_AMD64 CHECKSUM_OSX_ARM64 CHECKSUM_WINDOWS_AMD64; do
+  if [[ "${!var}" =~ [^a-zA-Z0-9._-] ]]; then
+    echo "Invalid characters in $var" >&2
+    exit 1
+  fi
+done
+
 python3 <<'PY'
 import os
 from pathlib import Path

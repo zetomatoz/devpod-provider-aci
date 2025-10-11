@@ -1,30 +1,24 @@
-using System;
 using System.Buffers;
 using System.Globalization;
-using System.IO;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Azure;
-using Azure.Core;
-using Azure.ResourceManager;
-using Azure.ResourceManager.ContainerInstance;
-using Azure.ResourceManager.ContainerInstance.Models;
-using Azure.ResourceManager.Models;
-using Azure.ResourceManager.Resources;
-using DevPod.Provider.ACI.Models;
-using DevPod.Provider.ACI.Infrastructure;
-using Microsoft.Extensions.Logging;
-using Polly;
-using Polly.Retry;
 
 namespace DevPod.Provider.ACI.Services;
 
 public class AciService : IAciService
 {
-    private const string ExitSentinel = "__ACI_EXIT_CODE__:";
-    private const int WebSocketBufferSize = 8 * 1024;
+    // Sentinel string to indicate exit code in command output
+    // This should be unique enough to avoid collisions
+    // The StripExitInfo method could fail if the sentinel appears in legitimate command output.
+    // Recommendation: we use a more unique sentinel
+    private const string ExitSentinel = "__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:";
+
+    // todo Consider making it configurable or larger.
+    private const int WebSocketBufferSize = 64 * 1024;
+
+    private const byte WebSocketChannelStdout = 1;
+    private const byte WebSocketChannelStderr = 2;
+    private const byte WebSocketChannelError = 3;     
 
     private readonly ILogger<AciService> _logger;
     private readonly IAuthenticationService _authService;
@@ -139,6 +133,14 @@ public class AciService : IAciService
         return MapToContainerStatus(containerGroup!.Data);
     }
 
+    /// <summary>
+    /// Executes a command inside the specified container group via WebSocket.
+    /// </summary>
+    /// <param name="containerGroupName">The name of the container group.</param>
+    /// <param name="command">The command to execute.</param>
+    /// <param name="timeout">Optional timeout for command execution.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The result of command execution including exit code and output.</returns>
     public async Task<CommandExecutionResult> ExecuteCommandAsync(
         string containerGroupName,
         string command,
@@ -164,6 +166,13 @@ public class AciService : IAciService
         if (string.IsNullOrWhiteSpace(containerName))
         {
             throw new InvalidOperationException($"Unable to resolve container name for container group '{containerGroupName}'.");
+        }
+
+        var state = container.InstanceView?.CurrentState?.State ?? "Unknown";
+        if (state.Equals("Terminated", StringComparison.OrdinalIgnoreCase)
+         || state.Equals("Failed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Cannot execute command: container is in '{state}' state");
         }
 
         if (!string.Equals(container.InstanceView?.CurrentState?.State, "Running", StringComparison.OrdinalIgnoreCase))
@@ -466,15 +475,20 @@ public class AciService : IAciService
         }
 
         var passwordPayload = Encoding.UTF8.GetBytes(execResult.Password);
+        if (webSocket.State != WebSocketState.Open)
+        {
+            throw new InvalidOperationException($"WebSocket is not open. State: {webSocket.State}");
+        }
         await webSocket.SendAsync(passwordPayload, WebSocketMessageType.Text, true, timeoutCts.Token).ConfigureAwait(false);
 
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
         int? exitCode = null;
 
-        var buffer = ArrayPool<byte>.Shared.Rent(WebSocketBufferSize);
+        byte[]? buffer = null;
         try
         {
+            buffer = ArrayPool<byte>.Shared.Rent(WebSocketBufferSize);
             using var messageStream = new MemoryStream();
 
             while (true)
@@ -550,15 +564,15 @@ public class AciService : IAciService
 
             switch (channel)
             {
-                case 1: // stdout
+                case WebSocketChannelStdout:
                     stdout.Append(text);
                     exitCode ??= TryParseExitCodeFromMessage(text);
                     break;
-                case 2: // stderr
+                case WebSocketChannelStderr:
                     stderr.Append(text);
                     exitCode ??= TryParseExitCodeFromMessage(text);
                     break;
-                case 3: // error / status
+                case WebSocketChannelError:
                     stderr.Append(text);
                     exitCode ??= TryParseExitCodeFromMessage(text);
                     break;
@@ -652,10 +666,18 @@ public class AciService : IAciService
         return $"/bin/sh -c '{escaped}'";
     }
 
-    private static string EscapeForSingleQuotedString(string value) =>
-        value.Replace("'", "'\"'\"'");
+    private static string EscapeForSingleQuotedString(string value)
+    {
+        // Consider adding a warning if the command contains suspicious patterns
+        if (command.Contains("'\"'\"'") || command.Contains("${"))
+        {
+            _logger.LogWarning("Command contains potentially problematic shell metacharacters");
+        }
 
-    private bool IsTransientError(RequestFailedException ex)
+        return value.Replace("'", "'\"'\"'");
+    }
+
+    private static bool IsTransientError(RequestFailedException ex)
     {
         return ex.Status is 429 or // Too Many Requests
                503 or // Service Unavailable

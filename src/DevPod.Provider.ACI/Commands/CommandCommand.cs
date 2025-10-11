@@ -60,7 +60,8 @@ public class CommandCommand(
             }
             catch (TimeoutException ex)
             {
-                logger.LogError(ex, "Remote command timed out after {Timeout}", timeout ?? TimeSpan.FromMinutes(5));
+                var actualTimeout = timeout ?? TimeSpan.FromMinutes(5);
+                logger.LogError(ex, "Remote command timed out after {Timeout}", actualTimeout);
                 Console.Error.WriteLine($"Command timed out: {ex.Message}");
                 return 124;
             }
