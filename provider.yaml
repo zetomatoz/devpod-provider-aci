@@ -249,7 +249,7 @@ binaries:
   ACI_PROVIDER:
     - os: linux
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-linux-amd64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-linux-x64
       checksum: ${CHECKSUM_LINUX_AMD64}
     - os: linux
       arch: arm64
@@ -257,7 +257,7 @@ binaries:
       checksum: ${CHECKSUM_LINUX_ARM64}
     - os: darwin
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-osx-amd64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-osx-x64
       checksum: ${CHECKSUM_DARWIN_AMD64}
     - os: darwin
       arch: arm64
@@ -265,7 +265,7 @@ binaries:
       checksum: ${CHECKSUM_DARWIN_ARM64}
     - os: windows
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-win-amd64.exe
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-win-x64.exe
       checksum: ${CHECKSUM_WINDOWS_AMD64}
 
 exec:
