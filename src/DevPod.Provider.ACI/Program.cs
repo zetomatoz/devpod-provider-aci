@@ -61,6 +61,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         .AddSingleton<IProviderOptionsService, ProviderOptionsService>()
         .AddSingleton<IAuthenticationService, AuthenticationService>()
         .AddSingleton<ISecretService, KeyVaultSecretService>()
+        .AddSingleton<IWebSocketClientFactory, DefaultWebSocketClientFactory>()
         .AddSingleton<IAciService, AciService>()
         .AddTransient<InitCommand>()
         .AddTransient<CreateCommand>()

@@ -1,3 +1,11 @@
+using System;
+using System.Buffers;
+using System.Globalization;
+using System.IO;
+using System.Net.WebSockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
@@ -6,27 +14,43 @@ using Azure.ResourceManager.ContainerInstance.Models;
 using Azure.ResourceManager.Models;
 using Azure.ResourceManager.Resources;
 using DevPod.Provider.ACI.Models;
+using DevPod.Provider.ACI.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
-
 namespace DevPod.Provider.ACI.Services;
 
 public class AciService : IAciService
 {
+    // Sentinel string to indicate exit code in command output
+    // This should be unique enough to avoid collisions
+    // The StripExitInfo method could fail if the sentinel appears in legitimate command output.
+    // Recommendation: we use a more unique sentinel
+    private const string ExitSentinel = "__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:";
+
+    // todo Consider making it configurable or larger.
+    private const int WebSocketBufferSize = 64 * 1024;
+
+    private const byte WebSocketChannelStdout = 1;
+    private const byte WebSocketChannelStderr = 2;
+    private const byte WebSocketChannelError = 3;     
+
     private readonly ILogger<AciService> _logger;
     private readonly IAuthenticationService _authService;
     private readonly IProviderOptionsService _optionsService;
+    private readonly IWebSocketClientFactory _webSocketClientFactory;
     private readonly AsyncRetryPolicy _retryPolicy;
 
     public AciService(
         ILogger<AciService> logger,
         IAuthenticationService authService,
-        IProviderOptionsService optionsService)
+        IProviderOptionsService optionsService,
+        IWebSocketClientFactory webSocketClientFactory)
     {
         _logger = logger;
         _authService = authService;
         _optionsService = optionsService;
+        _webSocketClientFactory = webSocketClientFactory;
 
         // Configure retry policy for transient failures
         _retryPolicy = Policy
@@ -124,25 +148,79 @@ public class AciService : IAciService
         return MapToContainerStatus(containerGroup!.Data);
     }
 
-    public async Task<string> ExecuteCommandAsync(string containerGroupName, string command)
+    /// <summary>
+    /// Executes a command inside the specified container group via WebSocket.
+    /// </summary>
+    /// <param name="containerGroupName">The name of the container group.</param>
+    /// <param name="command">The command to execute.</param>
+    /// <param name="timeout">Optional timeout for command execution.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The result of command execution including exit code and output.</returns>
+    public async Task<CommandExecutionResult> ExecuteCommandAsync(
+        string containerGroupName,
+        string command,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(containerGroupName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(command);
+
         _logger.LogDebug("Executing command in container group: {ContainerGroupName}", containerGroupName);
 
         var containerGroup = await GetContainerGroupAsync(containerGroupName) ??
-        throw new InvalidOperationException($"Container group not found: {containerGroupName}");
+            throw new InvalidOperationException($"Container group not found: {containerGroupName}");
 
-        // Get the first container in the group
-        _ = containerGroup.Data.Containers.First().Name;
+        if (containerGroup.Data.Containers.Count == 0)
+        {
+            throw new InvalidOperationException($"Container group '{containerGroupName}' has no containers to execute against.");
+        }
 
-        // Execute command via exec endpoint
-        // Note: Direct exec API is not available in this SDK version
-        // Using alternative approach through SSH or returning placeholder
+        var container = containerGroup.Data.Containers[0];
+        var containerName = container.Name;
 
-        // Note: This is a simplified implementation. In production, you'd need to handle
-        // the WebSocket connection properly to execute commands and retrieve output
+        if (string.IsNullOrWhiteSpace(containerName))
+        {
+            throw new InvalidOperationException($"Unable to resolve container name for container group '{containerGroupName}'.");
+        }
 
-        // For now, we'll use SSH if available, or return a placeholder
-        return await ExecuteViaSSHAsync(containerGroup.Data, command);
+        var state = container.InstanceView?.CurrentState?.State ?? "Unknown";
+        if (state.Equals("Terminated", StringComparison.OrdinalIgnoreCase)
+         || state.Equals("Failed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Cannot execute command: container is in '{state}' state");
+        }
+
+        if (!string.Equals(container.InstanceView?.CurrentState?.State, "Running", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "Executing command while container {ContainerName} is in state {State}",
+                containerName,
+                container.InstanceView?.CurrentState?.State ?? "Unknown");
+        }
+
+        var execCommand = BuildExecCommand(command);
+        var execContent = new ContainerExecContent
+        {
+            Command = execCommand,
+            TerminalSize = new ContainerExecRequestTerminalSize
+            {
+                Cols = 200,
+                Rows = 40,
+            },
+        };
+
+        var execResultResponse = await containerGroup.ExecuteContainerCommandAsync(containerName, execContent, cancellationToken);
+        var execResult = execResultResponse.Value;
+        if (execResult.WebSocketUri is null || string.IsNullOrWhiteSpace(execResult.Password))
+        {
+            throw new InvalidOperationException("Azure Container Instance exec response did not include WebSocket connection info.");
+        }
+
+        var effectiveTimeout = timeout is { TotalMilliseconds: > 0 }
+            ? timeout.Value
+            : TimeSpan.FromMinutes(5);
+
+        return await RunExecSessionAsync(execResult, effectiveTimeout, cancellationToken);
     }
 
     public async Task<string> GetContainerLogsAsync(string containerGroupName, string containerName)
@@ -329,7 +407,7 @@ public class AciService : IAciService
         return containerGroupData;
     }
 
-    private async Task<ContainerGroupResource?> GetContainerGroupAsync(string name)
+    protected virtual async Task<ContainerGroupResource?> GetContainerGroupAsync(string name)
     {
         try
         {
@@ -396,13 +474,222 @@ public class AciService : IAciService
         return containerStates.Any(s => s == "Terminated") ? "Stopped" : containerStates.Any(s => s == "Waiting") ? "Pending" : "Unknown";
     }
 
-    private static async Task<string> ExecuteViaSSHAsync(ContainerGroupData containerGroup, string command)
+    private async Task<CommandExecutionResult> RunExecSessionAsync(ContainerExecResult execResult, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        // This is a simplified implementation
-        // In a real scenario, you'd need proper SSH connectivity to the container
-        // For now, return a message indicating the command was received
-        await Task.CompletedTask;
-        return $"Command '{command}' queued for execution";
+        await using var webSocket = _webSocketClientFactory.Create();
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(timeout);
+
+        try
+        {
+            await webSocket.ConnectAsync(execResult.WebSocketUri!, timeoutCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Timed out connecting to container exec endpoint after {timeout}.", ex);
+        }
+
+        var passwordPayload = Encoding.UTF8.GetBytes(execResult.Password);
+        if (webSocket.State != WebSocketState.Open)
+        {
+            throw new InvalidOperationException($"WebSocket is not open. State: {webSocket.State}");
+        }
+        await webSocket.SendAsync(passwordPayload, WebSocketMessageType.Text, true, timeoutCts.Token).ConfigureAwait(false);
+
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        int? exitCode = null;
+
+        byte[]? buffer = null;
+        try
+        {
+            buffer = ArrayPool<byte>.Shared.Rent(WebSocketBufferSize);
+            using var messageStream = new MemoryStream();
+
+            while (true)
+            {
+                WebSocketReceiveResult receiveResult;
+                try
+                {
+                    receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), timeoutCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    throw new TimeoutException($"Command execution timed out after {timeout}.", ex);
+                }
+
+                if (receiveResult.MessageType == WebSocketMessageType.Close)
+                {
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Completed", CancellationToken.None).ConfigureAwait(false);
+                    break;
+                }
+
+                if (receiveResult.Count > 0)
+                {
+                    messageStream.Write(buffer, 0, receiveResult.Count);
+                }
+
+                if (!receiveResult.EndOfMessage)
+                {
+                    continue;
+                }
+
+                var messageBytes = messageStream.ToArray();
+                messageStream.SetLength(0);
+
+                ProcessWebSocketMessage(receiveResult.MessageType, messageBytes, stdout, stderr, ref exitCode);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        var stdoutInfo = StripExitInfo(stdout.ToString());
+        var stderrInfo = StripExitInfo(stderr.ToString());
+
+        var finalExitCode = exitCode
+            ?? stdoutInfo.ExitCode
+            ?? stderrInfo.ExitCode
+            ?? 0;
+
+        return new CommandExecutionResult(
+            finalExitCode,
+            stdoutInfo.Text,
+            stderrInfo.Text);
+    }
+
+    private static void ProcessWebSocketMessage(
+        WebSocketMessageType messageType,
+        ReadOnlySpan<byte> payload,
+        StringBuilder stdout,
+        StringBuilder stderr,
+        ref int? exitCode)
+    {
+        if (payload.IsEmpty)
+        {
+            return;
+        }
+
+        if (messageType == WebSocketMessageType.Binary)
+        {
+            var channel = payload[0];
+            var remaining = payload.Length > 1 ? payload[1..] : ReadOnlySpan<byte>.Empty;
+            var text = remaining.IsEmpty ? string.Empty : Encoding.UTF8.GetString(remaining);
+
+            switch (channel)
+            {
+                case WebSocketChannelStdout:
+                    stdout.Append(text);
+                    exitCode ??= TryParseExitCodeFromMessage(text);
+                    break;
+                case WebSocketChannelStderr:
+                    stderr.Append(text);
+                    exitCode ??= TryParseExitCodeFromMessage(text);
+                    break;
+                case WebSocketChannelError:
+                    stderr.Append(text);
+                    exitCode ??= TryParseExitCodeFromMessage(text);
+                    break;
+                default:
+                    stdout.Append(text);
+                    break;
+            }
+
+            return;
+        }
+
+        var message = Encoding.UTF8.GetString(payload);
+        stdout.Append(message);
+        exitCode ??= TryParseExitCodeFromMessage(message);
+    }
+
+    private static (string Text, int? ExitCode) StripExitInfo(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return (text, null);
+        }
+
+        var index = text.LastIndexOf(ExitSentinel, StringComparison.Ordinal);
+        if (index < 0)
+        {
+            return (text, null);
+        }
+
+        var start = index + ExitSentinel.Length;
+        var end = start;
+
+        while (end < text.Length && char.IsDigit(text[end]))
+        {
+            end++;
+        }
+
+        if (!int.TryParse(text[start..end], NumberStyles.Integer, CultureInfo.InvariantCulture, out var code))
+        {
+            return (text, null);
+        }
+
+        var prefixEnd = index;
+        if (prefixEnd > 0 && text[prefixEnd - 1] == '\n')
+        {
+            prefixEnd -= 1;
+        }
+
+        var prefix = text[..prefixEnd];
+        var suffix = text[end..];
+        if (suffix.StartsWith("\n", StringComparison.Ordinal))
+        {
+            suffix = suffix[1..];
+        }
+
+        return (prefix + suffix, code);
+    }
+
+    private static int? TryParseExitCodeFromMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        var trimmed = message.Trim();
+
+        if (trimmed.StartsWith(ExitSentinel, StringComparison.Ordinal))
+        {
+            var numericPart = trimmed[ExitSentinel.Length..];
+            if (int.TryParse(numericPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sentinelCode))
+            {
+                return sentinelCode;
+            }
+        }
+
+        return null;
+    }
+
+    private string BuildExecCommand(string command)
+    {
+        var scriptBuilder = new StringBuilder();
+        scriptBuilder.AppendLine("set -o pipefail >/dev/null 2>&1 || true");
+        scriptBuilder.AppendLine(command);
+        scriptBuilder.AppendLine("status=$?");
+        scriptBuilder.AppendLine($"printf \"\\n{ExitSentinel}%d\\n\" \"$status\"");
+        scriptBuilder.AppendLine("exit $status");
+
+        var script = scriptBuilder.ToString();
+        var escaped = EscapeForSingleQuotedString(script);
+        return $"/bin/sh -c '{escaped}'";
+    }
+
+    private string EscapeForSingleQuotedString(string value)
+    {
+        // Log a warning if the command contains suspicious patterns
+        if (value.Contains("'\"'\"'") || value.Contains("${"))
+        {
+            _logger.LogWarning("Command contains potentially problematic shell metacharacters");
+        }
+
+        return value.Replace("'", "'\"'\"'");
     }
 
     private bool IsTransientError(RequestFailedException ex)

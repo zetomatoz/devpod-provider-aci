@@ -1,3 +1,4 @@
+using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -36,13 +37,16 @@ public class CommandHandlersTests
         return services.BuildServiceProvider();
     }
 
-    private static ProviderOptions DefaultOptions() => new()
+    private static ProviderOptions DefaultOptions()
     {
-        AzureSubscriptionId = "sub",
-        AzureResourceGroup = "rg",
-        AzureRegion = "eastus",
-        MachineId = "machine-1234",
-    };
+        return new ProviderOptions
+        {
+            AzureSubscriptionId = "sub",
+            AzureResourceGroup = "rg",
+            AzureRegion = "eastus",
+            MachineId = "machine-1234",
+        };
+    }
 
     [Fact]
     public async Task Router_UnknownCommand_ReturnsError()
@@ -214,94 +218,83 @@ public class CommandHandlersTests
     }
 
     [Fact]
-    public async Task CommandCommand_DevPodAgentPath_PrintsSshAndReturnsZero_WhenRunning()
-    {
-        var optionsMock = new Mock<IProviderOptionsService>();
-        optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
-
-        var aciMock = new Mock<IAciService>();
-        aciMock.Setup(a => a.GetContainerGroupStatusAsync(It.IsAny<string>()))
-            .ReturnsAsync(new ContainerStatus { State = "Running" });
-        aciMock.Setup(a => a.GetContainerEndpointAsync(It.IsAny<string>()))
-            .ReturnsAsync(("fqdn.example", "1.2.3.4"));
-
-        var sp = BuildProvider(optionsMock, aciMock);
-        var router = new CommandRouter(sp);
-
-        var original = Environment.GetEnvironmentVariable("COMMAND");
-        var sw = new StringWriter();
-        var originalOut = Console.Out;
-        try
-        {
-            Environment.SetEnvironmentVariable("COMMAND", "devpod agent inject");
-            Console.SetOut(sw);
-            var rc = await router.RouteAsync([Constants.Commands.Command]);
-            rc.Should().Be(0);
-            sw.ToString().Should().Contain("ssh devpod@fqdn.example");
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("COMMAND", original);
-            Console.SetOut(originalOut);
-        }
-    }
-
-    [Fact]
-    public async Task CommandCommand_DevPodAgentPath_ReturnsOne_WhenNotRunning()
-    {
-        var optionsMock = new Mock<IProviderOptionsService>();
-        optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
-
-        var aciMock = new Mock<IAciService>();
-        aciMock.Setup(a => a.GetContainerGroupStatusAsync(It.IsAny<string>()))
-            .ReturnsAsync(new ContainerStatus { State = "Pending" });
-        aciMock.Setup(a => a.GetContainerEndpointAsync(It.IsAny<string>()))
-            .ReturnsAsync(("", ""));
-
-        var sp = BuildProvider(optionsMock, aciMock);
-        var router = new CommandRouter(sp);
-
-        var original = Environment.GetEnvironmentVariable("COMMAND");
-        try
-        {
-            Environment.SetEnvironmentVariable("COMMAND", "devpod agent inject");
-            var rc = await router.RouteAsync([Constants.Commands.Command]);
-            rc.Should().Be(1);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("COMMAND", original);
-        }
-    }
-
-    [Fact]
     public async Task CommandCommand_ExecutesCommand_PrintsResult()
     {
         var optionsMock = new Mock<IProviderOptionsService>();
         optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
 
         var aciMock = new Mock<IAciService>();
-        aciMock.Setup(a => a.ExecuteCommandAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync("OK");
+        aciMock.Setup(a => a.ExecuteCommandAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandExecutionResult(0, "OK", string.Empty));
 
         var sp = BuildProvider(optionsMock, aciMock);
         var router = new CommandRouter(sp);
 
         var original = Environment.GetEnvironmentVariable("COMMAND");
         var sw = new StringWriter();
+        var errorWriter = new StringWriter();
         var originalOut = Console.Out;
+        var originalErr = Console.Error;
         try
         {
             Environment.SetEnvironmentVariable("COMMAND", "echo hi");
             Console.SetOut(sw);
+            Console.SetError(errorWriter);
             var rc = await router.RouteAsync([Constants.Commands.Command]);
             rc.Should().Be(0);
             sw.ToString().Trim().Should().Be("OK");
+            errorWriter.ToString().Should().BeEmpty();
         }
         finally
         {
             Environment.SetEnvironmentVariable("COMMAND", original);
             Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
+    }
+
+    [Fact]
+    public async Task CommandCommand_ReturnsExitCodeAndPrintsStderr()
+    {
+        var optionsMock = new Mock<IProviderOptionsService>();
+        optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
+
+        var aciMock = new Mock<IAciService>();
+        aciMock.Setup(a => a.ExecuteCommandAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandExecutionResult(7, string.Empty, "boom"));
+
+        var sp = BuildProvider(optionsMock, aciMock);
+        var router = new CommandRouter(sp);
+
+        var original = Environment.GetEnvironmentVariable("COMMAND");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+        try
+        {
+            Environment.SetEnvironmentVariable("COMMAND", "run");
+            Console.SetOut(stdout);
+            Console.SetError(stderr);
+
+            var rc = await router.RouteAsync([Constants.Commands.Command]);
+            rc.Should().Be(7);
+            stdout.ToString().Should().BeEmpty();
+            stderr.ToString().Should().Be("boom");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("COMMAND", original);
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
         }
     }
 
