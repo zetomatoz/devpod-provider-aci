@@ -257,15 +257,15 @@ binaries:
       checksum: ${CHECKSUM_LINUX_ARM64}
     - os: darwin
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-darwin-amd64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-osx-amd64
       checksum: ${CHECKSUM_DARWIN_AMD64}
     - os: darwin
       arch: arm64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-darwin-arm64
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-osx-arm64
       checksum: ${CHECKSUM_DARWIN_ARM64}
     - os: windows
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-windows-amd64.exe
+      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-win-amd64.exe
       checksum: ${CHECKSUM_WINDOWS_AMD64}
 
 exec:

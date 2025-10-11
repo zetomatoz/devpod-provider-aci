@@ -66,9 +66,9 @@ CHECKSUM_LINUX_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-linux-
 export CHECKSUM_LINUX_AMD64
 CHECKSUM_LINUX_ARM64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-linux-arm64.sha256")"
 export CHECKSUM_LINUX_ARM64
-CHECKSUM_DARWIN_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-darwin-x64.sha256")"
+CHECKSUM_DARWIN_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-osx-x64.sha256")"
 export CHECKSUM_DARWIN_AMD64
-CHECKSUM_DARWIN_ARM64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-darwin-arm64.sha256")"
+CHECKSUM_DARWIN_ARM64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-osx-arm64.sha256")"
 export CHECKSUM_DARWIN_ARM64
 CHECKSUM_WINDOWS_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-win-x64.exe.sha256")"
 export CHECKSUM_WINDOWS_AMD64
@@ -134,10 +134,10 @@ if "$PUBLISH"; then
     "$DIST_DIR/devpod-provider-aci-linux-x64.sha256"
     "$DIST_DIR/devpod-provider-aci-linux-arm64"
     "$DIST_DIR/devpod-provider-aci-linux-arm64.sha256"
-    "$DIST_DIR/devpod-provider-aci-darwin-x64"
-    "$DIST_DIR/devpod-provider-aci-darwin-x64.sha256"
-    "$DIST_DIR/devpod-provider-aci-darwin-arm64"
-    "$DIST_DIR/devpod-provider-aci-darwin-arm64.sha256"
+    "$DIST_DIR/devpod-provider-aci-osx-x64"
+    "$DIST_DIR/devpod-provider-aci-osx-x64.sha256"
+    "$DIST_DIR/devpod-provider-aci-osx-arm64"
+    "$DIST_DIR/devpod-provider-aci-osx-arm64.sha256"
     "$DIST_DIR/devpod-provider-aci-win-x64.exe"
     "$DIST_DIR/devpod-provider-aci-win-x64.exe.sha256"
     "$OUTPUT_PATH"
