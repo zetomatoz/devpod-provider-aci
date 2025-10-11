@@ -156,7 +156,7 @@ if "$PUBLISH"; then
   else
     echo "==> Creating GitHub release ${TAG}"
     gh release create "$TAG" "${assets[@]}" \
-      --title "DevPod ACI Provider v${VERSION}" \
+      --title "v${VERSION}" \
       --notes "Automated release for v${VERSION}"
   fi
 fi
