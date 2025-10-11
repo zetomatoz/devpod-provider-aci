@@ -56,8 +56,29 @@ This script publishes the provider binaries into `./dist/` and keeps `provider.y
 
 ## 4. Register the Local Provider with DevPod
 
+### 4.1 Create the releasable assets
+
+Produce releasable artifacts along with ./dist/provider.yaml file based on the ./provider.yaml template.
+
 ```bash
-devpod provider add ./provider.yaml --name aci-local
+.hack\release.sh 0.2.0
+```
+
+As needed, upload artifacts to the GitHub release for the provided version.
+
+**GitHub CLI (gh) is required when using --publish.**
+
+```bash
+.hack\release.sh --publish 0.2.0-alpha1
+```
+
+### 4.2 Test the releasable assets
+
+- Re-use the releasable assets in `./dist/`. 
+- These assets must be published since the releasable `provider.yaml` locates them using GitHub URLs
+
+```bash
+devpod provider add ./dist/provider.yaml --name aci-local
 ```
 
 You only need to do this once per machine. You can confirm registration with `devpod provider list`.
