@@ -692,7 +692,7 @@ public class AciService : IAciService
         return value.Replace("'", "'\"'\"'");
     }
 
-    private static bool IsTransientError(RequestFailedException ex)
+    private bool IsTransientError(RequestFailedException ex)
     {
         return ex.Status is 429 or // Too Many Requests
                503 or // Service Unavailable

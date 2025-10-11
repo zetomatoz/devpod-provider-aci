@@ -34,7 +34,7 @@ public class AciServiceCommandTests
         var webSocketMessages = new[]
         {
             FakeWebSocketMessage.Text("hello\n"),
-            FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE__:0\n"),
+            FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:0\n"),
         };
 
         var fakeWebSocket = new FakeWebSocketClient(webSocketMessages);
@@ -50,7 +50,7 @@ public class AciServiceCommandTests
         result.Stderr.Should().BeEmpty();
 
         capturedContent.Should().NotBeNull();
-        capturedContent!.Command.Should().Contain("__ACI_EXIT_CODE__");
+        capturedContent!.Command.Should().Contain("__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__");
 
         fakeWebSocket.SentMessages.Should().Equal("pwd");
         fakeWebSocket.CloseRequested.Should().BeTrue();
@@ -67,7 +67,7 @@ public class AciServiceCommandTests
         var webSocketMessages = new[]
         {
             FakeWebSocketMessage.Binary(2, "failure"),
-            FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE__:23\n"),
+            FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:23\n"),
         };
 
         var fakeWebSocket = new FakeWebSocketClient(webSocketMessages);
