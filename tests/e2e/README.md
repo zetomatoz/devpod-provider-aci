@@ -85,15 +85,54 @@ You only need to do this once per machine. You can confirm registration with `de
 
 ## 5. Launch the Hello World Sample
 
-Run the workspace using the provider you just added:
+The provider reads configuration from environment variables each time DevPod invokes it. Before running `devpod up`, make sure the following baseline variables are exported in your shell (or provided as DevPod provider options):
 
 ```bash
-devpod up ./samples/dotnet-hello-world \
-  --provider aci-local \
-  --workspace aci-hello
+export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"          # required
+export AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-devpod-aci-e2e}"  # defaults to devpod-aci-rg if omitted
+export AZURE_REGION="${AZURE_REGION:-westus2}"            # defaults to eastus if omitted
 ```
 
-The CLI will upload the DevPod agent, create an ACI container group, and mount the sample repository snapshot inside the container. This typically completes within a couple of minutes.
+If you rely on an Azure Service Principal instead of `az login`, also export `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET`. All other provider settings fall back to the built-in defaults:
+
+- Image: `mcr.microsoft.com/devcontainers/base:ubuntu`
+- CPU / Memory: `2 vCPU`, `4 GiB`
+- GPU: disabled
+- Restart policy: `Never`
+- SSH port 22 exposed
+
+### 5.1 Machine Provider Mode (default)
+
+In machine mode DevPod manages the `MACHINE_ID` and other machine metadata automatically. Ensure `ACI_PROVIDER_SETUP` is unset or set to `Machine`:
+
+```bash
+unset ACI_PROVIDER_SETUP  # or: export ACI_PROVIDER_SETUP=Machine
+devpod up ./samples/dotnet-hello-world \
+  --provider aci-local \
+  --workspace aci-hello \
+  --ide vscode
+```
+
+The CLI uploads the DevPod agent, provisions an ACI container group named after the machine (for example `devpod-aci-hello`), and mounts the sample repository snapshot inside the container.
+
+### 5.2 Workspace Provider Mode (no machine record)
+
+If you prefer to address container groups directly without creating a DevPod machine record, switch the provider into workspace mode. Provide a deterministic container group name so repeated `devpod up` calls reuse the same group:
+
+```bash
+export ACI_PROVIDER_SETUP=Workspace
+export ACI_CONTAINER_GROUP_NAME="aci-hello-ws"   # optional override; otherwise derived from WORKSPACE_UID
+devpod up ./samples/dotnet-hello-world \
+  --provider aci-local \
+  --workspace aci-hello-ws \
+  --ide vscode
+unset ACI_PROVIDER_SETUP
+unset ACI_CONTAINER_GROUP_NAME
+```
+
+In workspace mode the provider uses the workspace UID or the supplied `ACI_CONTAINER_GROUP_NAME` to build the container group name while keeping every other default identical to machine mode.
+
+The provisioning flow typically completes within a couple of minutes in either mode.
 
 ## 6. Validate the Workspace
 

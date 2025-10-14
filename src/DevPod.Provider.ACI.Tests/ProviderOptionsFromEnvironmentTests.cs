@@ -5,15 +5,15 @@ public class ProviderOptionsFromEnvironmentTests
     [Fact]
     public void FromEnvironment_UsesDefaults_WhenNotSet()
     {
-        var snapshot = new EnvSnapshot();
+        using var snapshot = new EnvSnapshot();
         snapshot.Clear(
             "AZURE_SUBSCRIPTION_ID", "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET",
             "AZURE_RESOURCE_GROUP", "AZURE_REGION", "ACI_CPU_CORES", "ACI_MEMORY_GB", "ACI_GPU_COUNT",
-            "ACI_RESTART_POLICY", "ACI_VNET_NAME", "ACI_SUBNET_NAME", "ACI_DNS_LABEL",
+            "ACI_CONTAINER_GROUP_NAME", "ACI_RESTART_POLICY", "ACI_VNET_NAME", "ACI_SUBNET_NAME", "ACI_DNS_LABEL",
             "ACR_SERVER", "ACR_USERNAME", "ACR_PASSWORD",
             "ACI_STORAGE_ACCOUNT_NAME", "ACI_STORAGE_ACCOUNT_KEY", "ACI_FILE_SHARE_NAME",
             "AGENT_PATH", "INACTIVITY_TIMEOUT", "INJECT_GIT_CREDENTIALS", "INJECT_DOCKER_CREDENTIALS",
-            "MACHINE_ID", "MACHINE_FOLDER", "WORKSPACE_ID", "WORKSPACE_UID");
+            "MACHINE_ID", "MACHINE_FOLDER", "WORKSPACE_ID", "WORKSPACE_UID", "ACI_PROVIDER_SETUP");
 
         var opts = ProviderOptions.FromEnvironment();
         opts.AzureResourceGroup.Should().Be("devpod-aci-rg");
@@ -24,12 +24,13 @@ public class ProviderOptionsFromEnvironmentTests
         opts.AgentPath.Should().Be("/home/devpod/.devpod");
         opts.InactivityTimeout.Should().Be("30m");
         opts.AciFileShareName.Should().Be("devpod-workspace");
+        opts.ProviderSetup.Should().Be("Machine");
     }
 
     [Fact]
     public void FromEnvironment_ParsesNumericAndBoolValues()
     {
-        var snapshot = new EnvSnapshot();
+        using var snapshot = new EnvSnapshot();
         snapshot.Set(new()
         {
             ["AZURE_RESOURCE_GROUP"] = "rgX",
@@ -43,6 +44,8 @@ public class ProviderOptionsFromEnvironmentTests
             ["INJECT_GIT_CREDENTIALS"] = "false",
             ["INJECT_DOCKER_CREDENTIALS"] = "true",
             ["ACI_FILE_SHARE_NAME"] = "share1",
+            ["ACI_PROVIDER_SETUP"] = "Workspace",
+            ["ACI_CONTAINER_GROUP_NAME"] = "Existing-Group",
         });
 
         var opts = ProviderOptions.FromEnvironment();
@@ -57,6 +60,8 @@ public class ProviderOptionsFromEnvironmentTests
         opts.InjectGitCredentials.Should().BeFalse();
         opts.InjectDockerCredentials.Should().BeTrue();
         opts.AciFileShareName.Should().Be("share1");
+        opts.ProviderSetup.Should().Be("Workspace");
+        opts.AciContainerGroupName.Should().Be("Existing-Group");
     }
 
     [Fact]
@@ -72,6 +77,21 @@ public class ProviderOptionsFromEnvironmentTests
         var name2 = opts2.GetContainerGroupName();
         name2.Should().StartWith("devpod-");
         name2.Length.Should().Be(15); // devpod- (7) + 8 chars
+    }
+
+    [Fact]
+    public void FromEnvironment_DefaultsToWorkspaceMode_WhenMachineIdMissing()
+    {
+        using var snapshot = new EnvSnapshot();
+        snapshot.Clear("ACI_PROVIDER_SETUP", "MACHINE_ID");
+        snapshot.Set(new()
+        {
+            ["WORKSPACE_UID"] = "abc123",
+        });
+
+        var opts = ProviderOptions.FromEnvironment();
+        opts.ProviderSetup.Should().Be("Workspace");
+        opts.IsMachineProvider.Should().BeFalse();
     }
 
     private sealed class EnvSnapshot : IDisposable

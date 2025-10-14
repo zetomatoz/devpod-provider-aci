@@ -1,9 +1,12 @@
 using System.Globalization;
+using System.Text;
 
 namespace DevPod.Provider.ACI.Models;
 
 public class ProviderOptions
 {
+    private const int MaxContainerGroupNameLength = 63;
+
     // Azure Authentication
     public string? AzureSubscriptionId { get; set; }
     public string? AzureTenantId { get; set; }
@@ -16,6 +19,7 @@ public class ProviderOptions
     public double AciCpuCores { get; set; } = 2.0;
     public double AciMemoryGb { get; set; } = 4.0;
     public int AciGpuCount { get; set; }
+    public string? AciContainerGroupName { get; set; }
     public string AciRestartPolicy { get; set; } = "Never";
 
     // Network Configuration
@@ -49,6 +53,10 @@ public class ProviderOptions
     public string? MachineFolder { get; set; }
     public string? WorkspaceId { get; set; }
     public string? WorkspaceUid { get; set; }
+    public string ProviderSetup { get; set; } = "Machine";
+
+    public bool IsMachineProvider =>
+        string.Equals(ProviderSetup, "Machine", StringComparison.OrdinalIgnoreCase);
 
     public static ProviderOptions FromEnvironment()
     {
@@ -83,6 +91,11 @@ public class ProviderOptions
             options.AciGpuCount = gpu;
         }
 
+        var containerGroupOverride = Environment.GetEnvironmentVariable("ACI_CONTAINER_GROUP_NAME");
+        if (!string.IsNullOrWhiteSpace(containerGroupOverride))
+        {
+            options.AciContainerGroupName = containerGroupOverride.Trim();
+        }
         options.AciRestartPolicy = Environment.GetEnvironmentVariable("ACI_RESTART_POLICY") ?? options.AciRestartPolicy;
 
         // Network Configuration
@@ -126,18 +139,94 @@ public class ProviderOptions
         options.MachineFolder = Environment.GetEnvironmentVariable("MACHINE_FOLDER");
         options.WorkspaceId = Environment.GetEnvironmentVariable("WORKSPACE_ID");
         options.WorkspaceUid = Environment.GetEnvironmentVariable("WORKSPACE_UID");
+        var providerSetup = Environment.GetEnvironmentVariable("ACI_PROVIDER_SETUP");
+        if (!string.IsNullOrWhiteSpace(providerSetup))
+        {
+            options.ProviderSetup = providerSetup.Trim();
+        }
+        else if (string.IsNullOrWhiteSpace(options.MachineId) &&
+                 (!string.IsNullOrWhiteSpace(options.WorkspaceUid) || !string.IsNullOrWhiteSpace(options.WorkspaceId)))
+        {
+            options.ProviderSetup = "Workspace";
+        }
 
         return options;
     }
 
     public string GetContainerGroupName()
     {
+        if (!string.IsNullOrWhiteSpace(AciContainerGroupName))
+        {
+            return SanitizeContainerGroupName(AciContainerGroupName);
+        }
+
         if (!string.IsNullOrEmpty(MachineId))
         {
             // Ensure the name is valid for ACI (lowercase, alphanumeric, hyphens)
-            return $"devpod-{MachineId}".ToLower(CultureInfo.InvariantCulture).Replace("_", "-");
+            return SanitizeContainerGroupName($"devpod-{MachineId}");
         }
 
-        return $"devpod-{Guid.NewGuid().ToString()[..8]}".ToLower(CultureInfo.InvariantCulture);
+        if (!IsMachineProvider)
+        {
+            if (!string.IsNullOrEmpty(WorkspaceUid))
+            {
+                return SanitizeContainerGroupName($"devpod-ws-{WorkspaceUid}");
+            }
+
+            if (!string.IsNullOrEmpty(WorkspaceId))
+            {
+                return SanitizeContainerGroupName($"devpod-ws-{WorkspaceId}");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(WorkspaceUid))
+        {
+            return SanitizeContainerGroupName($"devpod-ws-{WorkspaceUid}");
+        }
+
+        var randomSuffix = Guid.NewGuid().ToString("N")[..8];
+        return SanitizeContainerGroupName($"devpod-{randomSuffix}");
+    }
+
+    private static string SanitizeContainerGroupName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "devpod";
+        }
+
+        var lower = value.ToLower(CultureInfo.InvariantCulture);
+        var builder = new StringBuilder(lower.Length);
+
+        foreach (var ch in lower)
+        {
+            if (char.IsLetterOrDigit(ch) || ch == '-')
+            {
+                builder.Append(ch);
+                continue;
+            }
+
+            if (ch == '_' || ch == ' ' || ch == '.')
+            {
+                builder.Append('-');
+                continue;
+            }
+
+            // Replace any other character with a hyphen
+            builder.Append('-');
+        }
+
+        var sanitized = builder.ToString().Trim('-');
+        if (string.IsNullOrEmpty(sanitized))
+        {
+            sanitized = "devpod";
+        }
+
+        if (sanitized.Length > MaxContainerGroupNameLength)
+        {
+            sanitized = sanitized[..MaxContainerGroupNameLength];
+        }
+
+        return sanitized;
     }
 }

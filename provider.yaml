@@ -79,7 +79,11 @@ options:
     description: Number of GPUs (if needed, only in supported regions)
     required: false
     default: "0"
-  
+
+  ACI_CONTAINER_GROUP_NAME:
+    description: Override the Azure Container Group name (leave empty for auto naming)
+    required: false
+
   ACI_RESTART_POLICY:
     description: Container restart policy
     required: false
@@ -177,6 +181,14 @@ options:
     required: false
     default: "false"
 
+  ACI_PROVIDER_SETUP:
+    description: Choose whether the provider manages machines or direct workspaces
+    required: false
+    default: Machine
+    suggestions:
+    - Machine
+    - Workspace
+
 optionGroups:
   - name: Azure Authentication
     options:
@@ -228,6 +240,12 @@ optionGroups:
     - INACTIVITY_TIMEOUT
     - INJECT_GIT_CREDENTIALS
     - INJECT_DOCKER_CREDENTIALS
+    defaultVisible: false
+
+  - name: Provider Setup
+    options:
+    - ACI_PROVIDER_SETUP
+    - ACI_CONTAINER_GROUP_NAME
     defaultVisible: false
 
 agent:
