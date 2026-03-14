@@ -66,61 +66,30 @@ CHECKSUM_LINUX_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-linux-
 export CHECKSUM_LINUX_AMD64
 CHECKSUM_LINUX_ARM64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-linux-arm64.sha256")"
 export CHECKSUM_LINUX_ARM64
-CHECKSUM_OSX_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-osx-x64.sha256")"
-export CHECKSUM_OSX_AMD64
-CHECKSUM_OSX_ARM64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-osx-arm64.sha256")"
-export CHECKSUM_OSX_ARM64
+CHECKSUM_DARWIN_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-osx-x64.sha256")"
+export CHECKSUM_DARWIN_AMD64
+CHECKSUM_DARWIN_ARM64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-osx-arm64.sha256")"
+export CHECKSUM_DARWIN_ARM64
 CHECKSUM_WINDOWS_AMD64="$(checksum_from_file "$DIST_DIR/devpod-provider-aci-win-x64.exe.sha256")"
 export CHECKSUM_WINDOWS_AMD64
 
 export TEMPLATE_PATH OUTPUT_PATH
 
-for var in VERSION CHECKSUM_LINUX_AMD64 CHECKSUM_LINUX_ARM64 CHECKSUM_OSX_AMD64 CHECKSUM_OSX_ARM64 CHECKSUM_WINDOWS_AMD64; do
+for var in VERSION CHECKSUM_LINUX_AMD64 CHECKSUM_LINUX_ARM64 CHECKSUM_DARWIN_AMD64 CHECKSUM_DARWIN_ARM64 CHECKSUM_WINDOWS_AMD64; do
   if [[ "${!var}" =~ [^a-zA-Z0-9._-] ]]; then
     echo "Invalid characters in $var" >&2
     exit 1
   fi
 done
 
-python3 <<'PY'
-import os
-from pathlib import Path
-from string import Template
+RELEASE_BASE="https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/"
+export BINARY_LINUX_AMD64="${RELEASE_BASE}devpod-provider-aci-linux-x64"
+export BINARY_LINUX_ARM64="${RELEASE_BASE}devpod-provider-aci-linux-arm64"
+export BINARY_DARWIN_AMD64="${RELEASE_BASE}devpod-provider-aci-osx-x64"
+export BINARY_DARWIN_ARM64="${RELEASE_BASE}devpod-provider-aci-osx-arm64"
+export BINARY_WINDOWS_AMD64="${RELEASE_BASE}devpod-provider-aci-win-x64.exe"
 
-template_path = Path(os.environ["TEMPLATE_PATH"])
-output_path = Path(os.environ["OUTPUT_PATH"])
-
-keys = [
-    "VERSION",
-    "CHECKSUM_LINUX_AMD64",
-    "CHECKSUM_LINUX_ARM64",
-    "CHECKSUM_OSX_AMD64",
-    "CHECKSUM_OSX_ARM64",
-    "CHECKSUM_WINDOWS_AMD64",
-]
-
-missing = [key for key in keys if not os.environ.get(key)]
-if missing:
-    raise SystemExit(f"Missing variables for templating: {', '.join(missing)}")
-
-values = {key: os.environ[key] for key in keys}
-template_content = template_path.read_text()
-rendered = Template(template_content).safe_substitute(values)
-
-lines = rendered.splitlines()
-for idx, line in enumerate(lines):
-    stripped = line.strip()
-    if stripped.startswith("version:"):
-        prefix = line[: line.find("version:")]
-        lines[idx] = f"{prefix}version: v{values['VERSION']}"
-        break
-
-rendered = "\n".join(lines)
-if template_content.endswith("\n"):
-    rendered += "\n"
-
-output_path.write_text(rendered)
-PY
+python3 "$SCRIPT_DIR/render_provider.py"
 
 echo "==> Release manifest written to $OUTPUT_PATH"
 echo "==> Upload binaries from $DIST_DIR along with provider.yaml to the GitHub release"
@@ -156,7 +125,7 @@ if "$PUBLISH"; then
   else
     echo "==> Creating GitHub release ${TAG}"
     gh release create "$TAG" "${assets[@]}" \
-      --title "DevPod ACI Provider v${VERSION}" \
+      --title "v${VERSION}" \
       --notes "Automated release for v${VERSION}"
   fi
 fi

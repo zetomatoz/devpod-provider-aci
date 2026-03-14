@@ -333,7 +333,7 @@ public class AciService : IAciService
         // Create container group
         var containerGroupData = new ContainerGroupData(location, [container], ContainerInstanceOperatingSystemType.Linux)
         {
-            RestartPolicy = Enum.Parse<ContainerGroupRestartPolicy>(definition.RestartPolicy, true),
+            RestartPolicy = ResolveRestartPolicy(definition.RestartPolicy),
         };
 
         // Configure identity for ACR pull if using Managed Identity
@@ -697,5 +697,33 @@ public class AciService : IAciService
         return ex.Status is 429 or // Too Many Requests
                503 or // Service Unavailable
                504;   // Gateway Timeout
+    }
+
+    private static ContainerGroupRestartPolicy ResolveRestartPolicy(string? restartPolicy)
+    {
+        if (string.IsNullOrWhiteSpace(restartPolicy))
+        {
+            return ContainerGroupRestartPolicy.Never;
+        }
+
+        var normalized = restartPolicy.Trim();
+
+        if (normalized.Equals("Always", StringComparison.OrdinalIgnoreCase))
+        {
+            return ContainerGroupRestartPolicy.Always;
+        }
+
+        if (normalized.Equals("OnFailure", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("On Failure", StringComparison.OrdinalIgnoreCase))
+        {
+            return ContainerGroupRestartPolicy.OnFailure;
+        }
+
+        if (normalized.Equals("Never", StringComparison.OrdinalIgnoreCase))
+        {
+            return ContainerGroupRestartPolicy.Never;
+        }
+
+        return new ContainerGroupRestartPolicy(normalized);
     }
 }

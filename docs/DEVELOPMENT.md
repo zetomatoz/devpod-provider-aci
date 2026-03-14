@@ -132,7 +132,7 @@ dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj --fil
 ./hack/build.sh
 
 # Add the local provider to DevPod
-devpod provider add ./provider.yaml --name aci-local
+devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
 ### Test with DevPod
@@ -174,9 +174,8 @@ For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Release Process
 
-Releases are automated via GitHub Actions. To create a new release:
-
-1. Update version in `provider.yaml`
-2. Create a git tag: `git tag v0.x.x`
-3. Push the tag: `git push origin v0.x.x`
-4. GitHub Actions will build and create the release automatically
+1. Render release artifacts: `./hack/release.sh <version>`
+2. Verify and publish the generated assets in `dist/` (use `--publish` to upload via `gh` automatically)
+3. Create a git tag: `git tag v<version>`
+4. Push the tag: `git push origin v<version>`
+5. Let the CI pipeline pick up the tag and validate the release

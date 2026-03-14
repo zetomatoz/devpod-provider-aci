@@ -52,48 +52,69 @@ From the repository root:
 ./hack/build.sh
 ```
 
-This script publishes the provider binaries into `./dist/` and keeps `provider.yaml` ready for local use.
+This script publishes the provider binaries into `./dist/` and renders `provider-local.yaml` that references the freshly built binaries.
 
 ## 4. Register the Local Provider with DevPod
 
-### 4.1 Create the releasable assets
-
-Produce releasable artifacts along with ./dist/provider.yaml file based on the ./provider.yaml template.
-
-```bash
-.hack\release.sh 0.2.0
-```
-
-As needed, upload artifacts to the GitHub release for the provided version.
-
-**GitHub CLI (gh) is required when using --publish.**
-
-```bash
-.hack\release.sh --publish 0.2.0-alpha1
-```
-
-### 4.2 Test the releasable assets
-
 - Re-use the releasable assets in `./dist/`. 
-- These assets must be published since the releasable `provider.yaml` locates them using GitHub URLs
+- `provider-local.yaml` resolves binaries from your local workspace, so no GitHub release is required.
 
 ```bash
-devpod provider add ./dist/provider.yaml --name aci-local
+devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
-You only need to do this once per machine. You can confirm registration with `devpod provider list`.
+You can confirm registration with `devpod provider list`.
 
 ## 5. Launch the Hello World Sample
 
-Run the workspace using the provider you just added:
+The provider reads configuration from environment variables each time DevPod invokes it. Before running `devpod up`, make sure the following baseline variables are exported in your shell (or provided as DevPod provider options):
 
 ```bash
-devpod up ./samples/dotnet-hello-world \
-  --provider aci-local \
-  --workspace aci-hello
+export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"          # required
+export AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-devpod-aci-e2e}"  # defaults to devpod-aci-rg if omitted
+export AZURE_REGION="${AZURE_REGION:-westus2}"            # defaults to eastus if omitted
 ```
 
-The CLI will upload the DevPod agent, create an ACI container group, and mount the sample repository snapshot inside the container. This typically completes within a couple of minutes.
+If you rely on an Azure Service Principal instead of `az login`, also export `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET`. All other provider settings fall back to the built-in defaults:
+
+- Image: `mcr.microsoft.com/devcontainers/base:ubuntu`
+- CPU / Memory: `2 vCPU`, `4 GiB`
+- GPU: disabled
+- Restart policy: `Never`
+- SSH port 22 exposed
+
+### 5.1 Machine Provider Mode (default)
+
+In machine mode DevPod manages the `MACHINE_ID` and other machine metadata automatically. Ensure `ACI_PROVIDER_SETUP` is unset or set to `Machine`:
+
+```bash
+unset ACI_PROVIDER_SETUP  # or: export ACI_PROVIDER_SETUP=Machine
+devpod up ./samples/dotnet-hello-world \
+  --provider aci-local \
+  --workspace aci-hello \
+  --ide vscode
+```
+
+The CLI uploads the DevPod agent, provisions an ACI container group named after the machine (for example `devpod-aci-hello`), and mounts the sample repository snapshot inside the container.
+
+### 5.2 Workspace Provider Mode (no machine record)
+
+If you prefer to address container groups directly without creating a DevPod machine record, switch the provider into workspace mode. Provide a deterministic container group name so repeated `devpod up` calls reuse the same group:
+
+```bash
+export ACI_PROVIDER_SETUP=Workspace
+export ACI_CONTAINER_GROUP_NAME="aci-hello-ws"   # optional override; otherwise derived from WORKSPACE_UID
+devpod up ./samples/dotnet-hello-world \
+  --provider aci-local \
+  --workspace aci-hello-ws \
+  --ide vscode
+unset ACI_PROVIDER_SETUP
+unset ACI_CONTAINER_GROUP_NAME
+```
+
+In workspace mode the provider uses the workspace UID or the supplied `ACI_CONTAINER_GROUP_NAME` to build the container group name while keeping every other default identical to machine mode.
+
+The provisioning flow typically completes within a couple of minutes in either mode.
 
 ## 6. Validate the Workspace
 
@@ -126,7 +147,7 @@ az group delete --name "$AZURE_RESOURCE_GROUP" --yes --no-wait
 
 ## Appendix: Cutting a Release
 
-When you are ready to publish a new provider release, use the helper script to build binaries, compute checksums, and render the release manifest in one go:
+When you are ready to publish a new provider release, use the helper script to build binaries, compute checksums, and render the release manifest (`dist/provider.yaml`) that points to GitHub-hosted binaries:
 
 ```bash
 ./hack/release.sh 0.2.0
@@ -141,7 +162,7 @@ The script runs the cross-platform build, writes fresh `.sha256` files into `dis
 
 That means the release bundle is ready. To publish it:
 
-1. Verify `dist/provider.yaml` contains the expected `version: v0.2.0`.
+1. Verify `dist/provider.yaml` contains the expected `version: v0.2.0` and URLs that match the release tag.
 2. Collect the binaries and checksums produced in `dist/` (Linux, macOS, Windows, plus their `.sha256` files).
 3. Upload `provider.yaml` and every binary/checksum pair to the matching GitHub release/tag.
 4. Optionally delete the intermediary per-runtime folders in `dist/` once the release is live.
