@@ -82,45 +82,14 @@ for var in VERSION CHECKSUM_LINUX_AMD64 CHECKSUM_LINUX_ARM64 CHECKSUM_DARWIN_AMD
   fi
 done
 
-python3 <<'PY'
-import os
-from pathlib import Path
-from string import Template
+RELEASE_BASE="https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/"
+export BINARY_LINUX_AMD64="${RELEASE_BASE}devpod-provider-aci-linux-x64"
+export BINARY_LINUX_ARM64="${RELEASE_BASE}devpod-provider-aci-linux-arm64"
+export BINARY_DARWIN_AMD64="${RELEASE_BASE}devpod-provider-aci-osx-x64"
+export BINARY_DARWIN_ARM64="${RELEASE_BASE}devpod-provider-aci-osx-arm64"
+export BINARY_WINDOWS_AMD64="${RELEASE_BASE}devpod-provider-aci-win-x64.exe"
 
-template_path = Path(os.environ["TEMPLATE_PATH"])
-output_path = Path(os.environ["OUTPUT_PATH"])
-
-keys = [
-    "VERSION",
-    "CHECKSUM_LINUX_AMD64",
-    "CHECKSUM_LINUX_ARM64",
-    "CHECKSUM_DARWIN_AMD64",
-    "CHECKSUM_DARWIN_ARM64",
-    "CHECKSUM_WINDOWS_AMD64",
-]
-
-missing = [key for key in keys if not os.environ.get(key)]
-if missing:
-    raise SystemExit(f"Missing variables for templating: {', '.join(missing)}")
-
-values = {key: os.environ[key] for key in keys}
-template_content = template_path.read_text()
-rendered = Template(template_content).safe_substitute(values)
-
-lines = rendered.splitlines()
-for idx, line in enumerate(lines):
-    stripped = line.strip()
-    if stripped.startswith("version:"):
-        prefix = line[: line.find("version:")]
-        lines[idx] = f"{prefix}version: v{values['VERSION']}"
-        break
-
-rendered = "\n".join(lines)
-if template_content.endswith("\n"):
-    rendered += "\n"
-
-output_path.write_text(rendered)
-PY
+python3 "$SCRIPT_DIR/render_provider.py"
 
 echo "==> Release manifest written to $OUTPUT_PATH"
 echo "==> Upload binaries from $DIST_DIR along with provider.yaml to the GitHub release"

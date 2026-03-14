@@ -1,5 +1,5 @@
 name: azure-container-instance
-version: v0.1.0
+version: v${VERSION}
 description: DevPod provider for Azure Container Instances (ACI) - Run dev containers serverlessly on Azure
 icon: https://raw.githubusercontent.com/Azure/azure-sdk-for-net/main/sdk/containerinstance/Azure.ResourceManager.ContainerInstance/images/icon.png
 homepage: https://github.com/zetomatoz/devpod-provider-aci
@@ -267,23 +267,23 @@ binaries:
   ACI_PROVIDER:
     - os: linux
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-linux-x64
+      path: ${BINARY_LINUX_AMD64}
       checksum: ${CHECKSUM_LINUX_AMD64}
     - os: linux
       arch: arm64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-linux-arm64
+      path: ${BINARY_LINUX_ARM64}
       checksum: ${CHECKSUM_LINUX_ARM64}
     - os: darwin
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-osx-x64
+      path: ${BINARY_DARWIN_AMD64}
       checksum: ${CHECKSUM_DARWIN_AMD64}
     - os: darwin
       arch: arm64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-osx-arm64
+      path: ${BINARY_DARWIN_ARM64}
       checksum: ${CHECKSUM_DARWIN_ARM64}
     - os: windows
       arch: amd64
-      path: https://github.com/zetomatoz/devpod-provider-aci/releases/download/v${VERSION}/devpod-provider-aci-win-x64.exe
+      path: ${BINARY_WINDOWS_AMD64}
       checksum: ${CHECKSUM_WINDOWS_AMD64}
 
 exec:

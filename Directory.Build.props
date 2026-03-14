@@ -69,11 +69,9 @@
     <Optimize>true</Optimize>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <PublishTrimmed>true</PublishTrimmed>
     <PublishReadyToRun>true</PublishReadyToRun>
-    <TrimMode>partial</TrimMode>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <!-- Trimming stays disabled to preserve reflection metadata required by the Azure SDK -->
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <!-- Provider project specific runtime identifiers (do not include in lockfiles) -->

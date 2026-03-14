@@ -52,36 +52,18 @@ From the repository root:
 ./hack/build.sh
 ```
 
-This script publishes the provider binaries into `./dist/` and keeps `provider.yaml` ready for local use.
+This script publishes the provider binaries into `./dist/` and renders `provider-local.yaml` that references the freshly built binaries.
 
 ## 4. Register the Local Provider with DevPod
 
-### 4.1 Create the releasable assets
-
-Produce releasable artifacts along with ./dist/provider.yaml file based on the ./provider.yaml template.
-
-```bash
-.hack\release.sh 0.2.0
-```
-
-As needed, upload artifacts to the GitHub release for the provided version.
-
-**GitHub CLI (gh) is required when using --publish.**
-
-```bash
-.hack\release.sh --publish 0.2.0-alpha1
-```
-
-### 4.2 Test the releasable assets
-
 - Re-use the releasable assets in `./dist/`. 
-- These assets must be published since the releasable `provider.yaml` locates them using GitHub URLs
+- `provider-local.yaml` resolves binaries from your local workspace, so no GitHub release is required.
 
 ```bash
-devpod provider add ./dist/provider.yaml --name aci-local
+devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
-You only need to do this once per machine. You can confirm registration with `devpod provider list`.
+You can confirm registration with `devpod provider list`.
 
 ## 5. Launch the Hello World Sample
 
@@ -165,7 +147,7 @@ az group delete --name "$AZURE_RESOURCE_GROUP" --yes --no-wait
 
 ## Appendix: Cutting a Release
 
-When you are ready to publish a new provider release, use the helper script to build binaries, compute checksums, and render the release manifest in one go:
+When you are ready to publish a new provider release, use the helper script to build binaries, compute checksums, and render the release manifest (`dist/provider.yaml`) that points to GitHub-hosted binaries:
 
 ```bash
 ./hack/release.sh 0.2.0
@@ -180,7 +162,7 @@ The script runs the cross-platform build, writes fresh `.sha256` files into `dis
 
 That means the release bundle is ready. To publish it:
 
-1. Verify `dist/provider.yaml` contains the expected `version: v0.2.0`.
+1. Verify `dist/provider.yaml` contains the expected `version: v0.2.0` and URLs that match the release tag.
 2. Collect the binaries and checksums produced in `dist/` (Linux, macOS, Windows, plus their `.sha256` files).
 3. Upload `provider.yaml` and every binary/checksum pair to the matching GitHub release/tag.
 4. Optionally delete the intermediary per-runtime folders in `dist/` once the release is live.

@@ -44,8 +44,8 @@ cd devpod-provider-aci
 # OR
 ./hack/build.ps1 # On Windows
 
-# Add the local provider
-devpod provider add ./provider.yaml --name aci-local
+# Add the local provider manifest rendered in dist/
+devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
 ## 🛠️ Development
