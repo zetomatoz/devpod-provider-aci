@@ -10,12 +10,19 @@ public class CommandHandlersTests
         Mock<IProviderOptionsService>? optionsMock = null,
         Mock<IAciService>? aciMock = null,
         Mock<IAuthenticationService>? authMock = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool configureDefaultValidation = true)
     {
         optionsMock ??= new Mock<IProviderOptionsService>();
         aciMock ??= new Mock<IAciService>();
         authMock ??= new Mock<IAuthenticationService>();
         loggerFactory ??= NullLoggerFactory.Instance;
+        if (configureDefaultValidation)
+        {
+            var noErrors = new List<string>();
+            optionsMock.Setup(o => o.ValidateOptions(It.IsAny<ProviderOptions>(), out noErrors))
+                .Returns(true);
+        }
 
         var services = new ServiceCollection();
         services.AddSingleton(loggerFactory);
@@ -32,7 +39,7 @@ public class CommandHandlersTests
             .AddTransient<StartCommand>()
             .AddTransient<StopCommand>()
             .AddTransient<StatusCommand>()
-            .AddTransient<CommandCommand>();
+            .AddTransient<ExecCommand>();
 
         return services.BuildServiceProvider();
     }
@@ -76,10 +83,14 @@ public class CommandHandlersTests
         var sp = BuildProvider(optionsMock, aciMock);
         var router = new CommandRouter(sp);
 
+        var originalImage = Environment.GetEnvironmentVariable("WORKSPACE_IMAGE");
+        var originalSource = Environment.GetEnvironmentVariable("WORKSPACE_SOURCE");
         var sw = new StringWriter();
         var originalOut = Console.Out;
         try
         {
+            Environment.SetEnvironmentVariable("WORKSPACE_IMAGE", "ghcr.io/acme/devpod-provider-aci-hello-world:latest");
+            Environment.SetEnvironmentVariable("WORKSPACE_SOURCE", null);
             Console.SetOut(sw);
             var rc = await router.RouteAsync([Constants.Commands.Create]);
             rc.Should().Be(0);
@@ -91,6 +102,8 @@ public class CommandHandlersTests
         }
         finally
         {
+            Environment.SetEnvironmentVariable("WORKSPACE_IMAGE", originalImage);
+            Environment.SetEnvironmentVariable("WORKSPACE_SOURCE", originalSource);
             Console.SetOut(originalOut);
         }
     }
@@ -218,7 +231,7 @@ public class CommandHandlersTests
     }
 
     [Fact]
-    public async Task CommandCommand_ExecutesCommand_PrintsResult()
+    public async Task ExecCommand_ExecutesCommand_PrintsResult()
     {
         var optionsMock = new Mock<IProviderOptionsService>();
         optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
@@ -258,7 +271,7 @@ public class CommandHandlersTests
     }
 
     [Fact]
-    public async Task CommandCommand_ReturnsExitCodeAndPrintsStderr()
+    public async Task ExecCommand_ReturnsExitCodeAndPrintsStderr()
     {
         var optionsMock = new Mock<IProviderOptionsService>();
         optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
@@ -311,7 +324,7 @@ public class CommandHandlersTests
             }))
             .Returns(false);
 
-        var sp = BuildProvider(optionsMock);
+        var sp = BuildProvider(optionsMock, configureDefaultValidation: false);
         var router = new CommandRouter(sp);
 
         var sw = new StringWriter();

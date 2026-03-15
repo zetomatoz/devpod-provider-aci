@@ -1,68 +1,82 @@
 # DevPod Provider for Azure Container Instances
 
-Run your dev containers **serverlessly** on Azure Container Instances (ACI) with DevPod!
+Run image-backed DevPod workspaces on Azure Container Instances (ACI).
 
-## 🚀 Features
+## Current Scope
 
-- **Serverless Development**: No VMs to manage - containers run directly on ACI
-- **Cost Effective**: Pay only for the compute resources you use (per-second billing)
-- **Fast Startup**: Containers start in seconds, not minutes
-- **Flexible Resources**: Configure CPU, memory, and GPU as needed
-- **Persistent Storage**: Optional Azure File Share integration for workspace persistence
-- **Network Integration**: Support for both public and private (VNet) deployments
-- **Container Registry**: Seamless integration with Azure Container Registry
-- **Auto-shutdown**: Configurable inactivity timeout to save costs
+Supported in the current direct-ACI release:
 
-## 📋 Prerequisites
+- Published workspace images via `WORKSPACE_IMAGE`
+- Public ACI deployments with optional DNS labels
+- Azure File Share mounts
+- Azure Container Registry authentication through Managed Identity, Key Vault, or username/password
+- DevPod agent injection through the ACI exec WebSocket
 
-- DevPod CLI installed ([Installation Guide](https://devpod.sh/docs/getting-started/install))
-- Azure subscription with ACI service enabled
-- Azure CLI installed and configured (or service principal credentials)
-- .NET 8 SDK (for building from source)
+Not supported in this release:
 
-## 🔧 Installation
+- Local-path or git workspaces
+- General `.devcontainer` feature execution, bind mounts, or `postCreateCommand`
+- Private VNet/subnet deployments
 
-### Option 1: Install from Release
+## Prerequisites
+
+- DevPod CLI installed: [Installation Guide](https://devpod.sh/docs/getting-started/install)
+- Azure subscription with ACI enabled
+- Azure CLI logged in, or service principal credentials
+- .NET 8 SDK for local builds
+
+## Installation
+
+### Install from a release
 
 ```bash
-# Add the provider from GitHub releases
 devpod provider add github.com/your-org/devpod-provider-aci
-
-# Or add from a specific release
-devpod provider add https://github.com/your-org/devpod-provider-aci/releases/download/v0.1.0/provider.yaml
 ```
 
-### Option 2: Build from Source
+### Build from source
 
 ```bash
-# Clone the repository
 git clone https://github.com/zetomatoz/devpod-provider-aci
 cd devpod-provider-aci
 
-# Build the provider
-./hack/build.sh  # On Linux/macOS
-# OR
-./hack/build.ps1 # On Windows
-
-# Add the local provider manifest rendered in dist/
+./hack/build.sh
 devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
-## 🛠️ Development
+## Hello World Smoke Test
 
-For detailed development setup, building instructions, and project structure, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+The sample smoke test is image-based. It does not use `devpod up ./samples/dotnet-hello-world`.
 
-## 🔐 Registry Authentication
+```bash
+export AZURE_SUBSCRIPTION_ID="<subscription-id>"
+export AZURE_RESOURCE_GROUP="devpod-aci-e2e"
+export AZURE_REGION="westus2"
 
-- Recommended: Managed Identity (secretless)
-  - Set `ACR_AUTH_MODE=ManagedIdentity` (default).
-  - Optionally set `USER_ASSIGNED_IDENTITY_RESOURCE_ID` to use a user-assigned identity; otherwise a system-assigned identity is used.
-  - Grant the identity `AcrPull` on your ACR.
-- Alternative: Key Vault backed secrets
-  - Set `ACR_AUTH_MODE=KeyVault`, `KEYVAULT_URI`, `ACR_USERNAME_SECRET_NAME`, and `ACR_PASSWORD_SECRET_NAME`.
-  - Credentials are fetched at runtime with `DefaultAzureCredential` and never logged.
-- Fallback: Username/Password
-  - Set `ACR_AUTH_MODE=UsernamePassword` with `ACR_USERNAME` and `ACR_PASSWORD`.
-  - Prefer ACR tokens scoped to specific repositories over admin credentials and rotate regularly.
+devpod up ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest \
+  --provider aci-local \
+  --workspace aci-hello \
+  --ide none
+```
 
-Note: Secretless pull via Managed Identity is the most secure and operationally simple option when using Azure Container Registry.
+Validate the running workspace:
+
+```bash
+devpod ssh aci-hello
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS http://127.0.0.1:8080/
+exit
+```
+
+The detailed walkthrough lives in [tests/e2e/README.md](tests/e2e/README.md).
+
+## Development
+
+Development and sample-image publishing details are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## Registry Authentication
+
+- `ManagedIdentity` is the default and recommended mode.
+- `KeyVault` requires `KEYVAULT_URI`, `ACR_USERNAME_SECRET_NAME`, and `ACR_PASSWORD_SECRET_NAME`.
+- `UsernamePassword` requires `ACR_USERNAME` and `ACR_PASSWORD`.
+
+Managed Identity is the preferred path for ACR pulls when the image registry is Azure Container Registry.

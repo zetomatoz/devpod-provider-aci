@@ -49,10 +49,10 @@ public class ProviderOptionsService(ILogger<ProviderOptionsService> logger) : IP
             errors.Add("ACI_MEMORY_GB must be between 0.5 and 16");
         }
 
-        // Validate network configuration if provided
-        if (!string.IsNullOrEmpty(options.AciVnetName) && string.IsNullOrEmpty(options.AciSubnetName))
+        // Private networking is intentionally deferred for the direct ACI workflow.
+        if (!string.IsNullOrEmpty(options.AciVnetName) || !string.IsNullOrEmpty(options.AciSubnetName))
         {
-            errors.Add("ACI_SUBNET_NAME is required when ACI_VNET_NAME is specified");
+            errors.Add("ACI_VNET_NAME and ACI_SUBNET_NAME are not supported in the current direct ACI workflow");
         }
 
         // Validate registry configuration if provided

@@ -33,7 +33,7 @@ public class CommandRouter(IServiceProvider serviceProvider)
                 Constants.Commands.Start => await ExecuteCommandAsync<StartCommand>(c => c.ExecuteAsync()),
                 Constants.Commands.Stop => await ExecuteCommandAsync<StopCommand>(c => c.ExecuteAsync()),
                 Constants.Commands.Status => await ExecuteCommandAsync<StatusCommand>(c => c.ExecuteAsync()),
-                Constants.Commands.Command => await ExecuteCommandAsync<CommandCommand>(c => c.ExecuteAsync(commandArgs)),
+                Constants.Commands.Command => await ExecuteCommandAsync<ExecCommand>(c => c.ExecuteAsync(commandArgs)),
                 _ => HandleUnknownCommand(command),
             };
         }

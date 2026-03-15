@@ -69,7 +69,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         .AddTransient<StartCommand>()
         .AddTransient<StopCommand>()
         .AddTransient<StatusCommand>()
-        .AddTransient<CommandCommand>();
+        .AddTransient<ExecCommand>();
 }
 
 void ShowHelp()
@@ -91,8 +91,10 @@ void ShowHelp()
     Console.WriteLine("Environment Variables:");
     Console.WriteLine("  MACHINE_ID                - The DevPod machine ID");
     Console.WriteLine("  MACHINE_FOLDER           - The DevPod machine folder");
+    Console.WriteLine("  WORKSPACE_IMAGE          - Required image reference for the ACI workspace");
     Console.WriteLine("  AZURE_SUBSCRIPTION_ID    - Azure subscription ID");
     Console.WriteLine("  AZURE_RESOURCE_GROUP     - Azure resource group name");
     Console.WriteLine("  AZURE_REGION             - Azure region");
+    Console.WriteLine("  Note: local-path, git, and private VNet/subnet workflows are not supported in this release");
     Console.WriteLine("  Plus all options defined in provider.yaml");
 }

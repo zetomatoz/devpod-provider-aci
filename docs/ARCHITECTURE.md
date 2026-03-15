@@ -4,6 +4,12 @@
 
 The DevPod Provider ACI is a .NET-based provider that enables DevPod to create and manage development environments on Azure Container Instances (ACI). It provides a serverless approach to development containers with automatic scaling, pay-per-use pricing, and seamless integration with Azure services.
 
+Current release scope:
+
+- Published image workspaces only
+- Public networking only
+- Local-path, git, and private subnet flows intentionally rejected at runtime
+
 ## Architecture Components
 
 ### Core Architecture
@@ -24,7 +30,7 @@ graph TD
         C --> C4[StartCommand]
         C --> C5[StopCommand]
         C --> C6[StatusCommand]
-        C --> C7[CommandCommand]
+        C --> C7[ExecCommand]
         
         D --> D1[AciService]
         D --> D2[AuthenticationService]
@@ -70,7 +76,7 @@ The Commands layer implements the DevPod provider interface by handling the core
 - **StartCommand** (`StartCommand.cs`): Starts stopped container instances
 - **StopCommand** (`StopCommand.cs`): Stops running container instances
 - **StatusCommand** (`StatusCommand.cs`): Reports container group status and health
-- **CommandCommand** (`CommandCommand.cs`): Executes commands inside running containers
+- **ExecCommand** (`ExecCommand.cs`): Executes commands inside running containers
 
 Each command follows a consistent pattern:
 - Dependency injection for services
@@ -87,7 +93,7 @@ The Services layer abstracts Azure operations and provider configuration:
 Core service for Azure Container Instances operations:
 - Container group lifecycle management (create, start, stop, delete)
 - Resource group management (auto-creation)
-- Network configuration (public IP, VNET integration)
+- Network configuration for public IP and DNS label scenarios
 - Storage volume mounting (Azure File shares)
 - Command execution and log retrieval
 - Retry policy for transient failures
@@ -95,7 +101,7 @@ Core service for Azure Container Instances operations:
 Key capabilities:
 - **Resource Management**: Automatic resource group creation/discovery
 - **Container Configuration**: CPU, memory, GPU resource allocation
-- **Networking**: Public IP with DNS labels or private VNET integration
+- **Networking**: Public IP with optional DNS labels
 - **Storage**: Azure File share volumes for persistent workspaces
 - **Monitoring**: Container status tracking and log access
 
@@ -191,7 +197,7 @@ Centralized constants and configuration:
 
 ### Network Security
 - **Public Access**: Optional DNS labels for direct container access
-- **Private Networks**: VNET integration for isolated container groups
+- **Private Networks**: Deferred to a future implementation
 - **Container Security**: DevPod agent injection with secure communication
 
 ### Storage Security
@@ -223,7 +229,7 @@ Defines the provider interface for DevPod:
 ### Environment-Based Configuration
 - **Azure Settings**: Subscription, resource group, region configuration
 - **Container Settings**: Resource allocation and restart policies
-- **Network Settings**: DNS labels, VNET integration
+- **Network Settings**: DNS labels for public container groups
 - **Storage Settings**: File share configuration for persistence
 
 ## Extension Points
@@ -235,7 +241,7 @@ Defines the provider interface for DevPod:
 
 ### Azure Service Integration
 - **Storage**: Azure File shares, Blob storage mounting
-- **Networking**: VNET peering, private endpoints
+- **Networking**: Public ACI access; private networking is a follow-up item
 - **Monitoring**: Application Insights integration
 - **Security**: Key Vault secret injection
 

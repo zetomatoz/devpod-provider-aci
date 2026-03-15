@@ -21,7 +21,7 @@ public class ProviderOptionsFromEnvironmentTests
         opts.AciCpuCores.Should().Be(2.0);
         opts.AciMemoryGb.Should().Be(4.0);
         opts.AciRestartPolicy.Should().Be("Never");
-        opts.AgentPath.Should().Be("/home/devpod/.devpod");
+        opts.AgentPath.Should().Be("/tmp/devpod");
         opts.InactivityTimeout.Should().Be("30m");
         opts.AciFileShareName.Should().Be("devpod-workspace");
         opts.ProviderSetup.Should().Be("Machine");

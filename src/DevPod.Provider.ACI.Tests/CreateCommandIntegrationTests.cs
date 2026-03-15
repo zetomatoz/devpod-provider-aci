@@ -45,8 +45,8 @@ public class CreateCommandIntegrationTests
             ["MACHINE_FOLDER"] = null,
             ["WORKSPACE_ID"] = null,
             ["WORKSPACE_UID"] = null,
-            ["WORKSPACE_SOURCE"] = "git@github.com:acme/repo.git",
-            ["WORKSPACE_IMAGE"] = null,
+            ["WORKSPACE_SOURCE"] = null,
+            ["WORKSPACE_IMAGE"] = "ghcr.io/acme/devpod-provider-aci-hello-world:latest",
             ["ACI_PROVIDER_SETUP"] = null,
             ["GIT_USERNAME"] = null,
             ["GIT_TOKEN"] = null,
@@ -107,7 +107,7 @@ public class CreateCommandIntegrationTests
         capturedDefinition!.Name.Should().Be(expectedContainerName);
         capturedDefinition.ResourceGroup.Should().Be(Constants.Defaults.ResourceGroupName);
         capturedDefinition.Location.Should().Be(Constants.Defaults.Region);
-        capturedDefinition.Image.Should().Be(Constants.Defaults.BaseImage);
+        capturedDefinition.Image.Should().Be("ghcr.io/acme/devpod-provider-aci-hello-world:latest");
         capturedDefinition.CpuCores.Should().Be(Constants.Defaults.CpuCores);
         capturedDefinition.MemoryGb.Should().Be(Constants.Defaults.MemoryGb);
         capturedDefinition.GpuCount.Should().Be(0);
@@ -120,8 +120,10 @@ public class CreateCommandIntegrationTests
 
         capturedDefinition.EnvironmentVariables.Should().ContainKey("DEVPOD_AGENT_PATH");
         capturedDefinition.EnvironmentVariables["DEVPOD_AGENT_PATH"].Should().Be(Constants.Defaults.AgentPath);
-        capturedDefinition.EnvironmentVariables.Should().ContainKey("WORKSPACE_SOURCE");
-        capturedDefinition.EnvironmentVariables["WORKSPACE_SOURCE"].Should().Be("git@github.com:acme/repo.git");
+        capturedDefinition.EnvironmentVariables.Should().Contain("AZURE_RESOURCE_GROUP", Constants.Defaults.ResourceGroupName);
+        capturedDefinition.EnvironmentVariables.Should().Contain("AZURE_REGION", Constants.Defaults.Region);
+        capturedDefinition.EnvironmentVariables.Should().Contain("MACHINE_ID", "Machine-ABC123");
+        capturedDefinition.EnvironmentVariables.Should().NotContainKey("WORKSPACE_SOURCE");
 
         stdout.ToString().Should().Contain("###START_CONTAINER###");
         stdout.ToString().Should().Contain(expectedContainerName);
@@ -129,6 +131,145 @@ public class CreateCommandIntegrationTests
         stderr.ToString().Should().BeEmpty();
 
         aciServiceMock.Verify(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutWorkspaceImage_FailsBeforeProvisioning()
+    {
+        using var env = new EnvironmentVariableScope(new Dictionary<string, string?>
+        {
+            ["AZURE_SUBSCRIPTION_ID"] = "00000000-0000-0000-0000-000000000000",
+            ["AZURE_RESOURCE_GROUP"] = "rg",
+            ["AZURE_REGION"] = "eastus",
+            ["MACHINE_ID"] = "machine-abc",
+            ["WORKSPACE_IMAGE"] = null,
+            ["WORKSPACE_SOURCE"] = null,
+        });
+
+        var optionsService = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var aciServiceMock = new Mock<IAciService>(MockBehavior.Strict);
+
+        var services = new ServiceCollection();
+        services
+            .AddSingleton(NullLoggerFactory.Instance)
+            .AddLogging()
+            .AddSingleton<IProviderOptionsService>(optionsService)
+            .AddSingleton(aciServiceMock.Object)
+            .AddSingleton(new Mock<ISecretService>().Object)
+            .AddTransient<CreateCommand>();
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        var command = serviceProvider.GetRequiredService<CreateCommand>();
+
+        var originalErr = Console.Error;
+        using var stderr = new StringWriter();
+        Console.SetError(stderr);
+
+        try
+        {
+            var exitCode = await command.ExecuteAsync();
+            exitCode.Should().Be(1);
+        }
+        finally
+        {
+            Console.SetError(originalErr);
+        }
+
+        stderr.ToString().Should().Contain("WORKSPACE_IMAGE is required");
+        aciServiceMock.Verify(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithGitWorkspaceSource_FailsBeforeProvisioning()
+    {
+        using var env = new EnvironmentVariableScope(new Dictionary<string, string?>
+        {
+            ["AZURE_SUBSCRIPTION_ID"] = "00000000-0000-0000-0000-000000000000",
+            ["AZURE_RESOURCE_GROUP"] = "rg",
+            ["AZURE_REGION"] = "eastus",
+            ["MACHINE_ID"] = "machine-abc",
+            ["WORKSPACE_IMAGE"] = "ghcr.io/acme/hello-world:latest",
+            ["WORKSPACE_SOURCE"] = "https://github.com/acme/hello-world.git",
+        });
+
+        var optionsService = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var aciServiceMock = new Mock<IAciService>(MockBehavior.Strict);
+
+        var services = new ServiceCollection();
+        services
+            .AddSingleton(NullLoggerFactory.Instance)
+            .AddLogging()
+            .AddSingleton<IProviderOptionsService>(optionsService)
+            .AddSingleton(aciServiceMock.Object)
+            .AddSingleton(new Mock<ISecretService>().Object)
+            .AddTransient<CreateCommand>();
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        var command = serviceProvider.GetRequiredService<CreateCommand>();
+
+        var originalErr = Console.Error;
+        using var stderr = new StringWriter();
+        Console.SetError(stderr);
+
+        try
+        {
+            var exitCode = await command.ExecuteAsync();
+            exitCode.Should().Be(1);
+        }
+        finally
+        {
+            Console.SetError(originalErr);
+        }
+
+        stderr.ToString().Should().Contain("published image workspaces only");
+        aciServiceMock.Verify(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithPrivateNetworkingOptions_FailsBeforeProvisioning()
+    {
+        using var env = new EnvironmentVariableScope(new Dictionary<string, string?>
+        {
+            ["AZURE_SUBSCRIPTION_ID"] = "00000000-0000-0000-0000-000000000000",
+            ["AZURE_RESOURCE_GROUP"] = "rg",
+            ["AZURE_REGION"] = "eastus",
+            ["MACHINE_ID"] = "machine-abc",
+            ["WORKSPACE_IMAGE"] = "ghcr.io/acme/hello-world:latest",
+            ["ACI_VNET_NAME"] = "devpod-vnet",
+            ["ACI_SUBNET_NAME"] = "aci-subnet",
+        });
+
+        var optionsService = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var aciServiceMock = new Mock<IAciService>(MockBehavior.Strict);
+
+        var services = new ServiceCollection();
+        services
+            .AddSingleton(NullLoggerFactory.Instance)
+            .AddLogging()
+            .AddSingleton<IProviderOptionsService>(optionsService)
+            .AddSingleton(aciServiceMock.Object)
+            .AddSingleton(new Mock<ISecretService>().Object)
+            .AddTransient<CreateCommand>();
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        var command = serviceProvider.GetRequiredService<CreateCommand>();
+
+        var originalErr = Console.Error;
+        using var stderr = new StringWriter();
+        Console.SetError(stderr);
+
+        try
+        {
+            var exitCode = await command.ExecuteAsync();
+            exitCode.Should().Be(1);
+        }
+        finally
+        {
+            Console.SetError(originalErr);
+        }
+
+        stderr.ToString().Should().Contain("not supported in the current direct ACI workflow");
+        aciServiceMock.Verify(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()), Times.Never);
     }
 
     private sealed class EnvironmentVariableScope : IDisposable

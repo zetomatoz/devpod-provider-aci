@@ -1,159 +1,100 @@
 # Development Guide
 
-This document provides development setup instructions and project structure details for the DevPod Provider ACI.
+This repository currently targets a direct ACI workflow for published workspace images.
 
-## Repo Structure
+## Current Development Contract
 
-```
-devpod-provider-aci/
-├── src/
-│   ├── DevPod.Provider.ACI/
-│   │   ├── DevPod.Provider.ACI.csproj
-│   │   ├── Program.cs
-│   │   ├── Commands/
-│   │   │   ├── InitCommand.cs
-│   │   │   ├── CreateCommand.cs
-│   │   │   ├── DeleteCommand.cs
-│   │   │   ├── StartCommand.cs
-│   │   │   ├── StopCommand.cs
-│   │   │   ├── StatusCommand.cs
-│   │   │   └── CommandCommand.cs
-│   │   ├── Services/
-│   │   │   ├── IAciService.cs
-│   │   │   ├── AciService.cs
-│   │   │   ├── IAuthenticationService.cs
-│   │   │   ├── AuthenticationService.cs
-│   │   │   ├── IProviderOptionsService.cs
-│   │   │   └── ProviderOptionsService.cs
-│   │   ├── Models/
-│   │   │   ├── ProviderOptions.cs
-│   │   │   ├── ContainerGroupDefinition.cs
-│   │   │   └── ContainerStatus.cs
-│   │   ├── Infrastructure/
-│   │   │   ├── Constants.cs
-│   │   │   ├── Logger.cs
-│   │   │   └── CommandRouter.cs
-│   │   └── appsettings.json
-│   │
-│   └── DevPod.Provider.ACI.Tests/
-│       ├── DevPod.Provider.ACI.Tests.csproj
-│       ├── Unit/
-│       │   ├── Services/
-│       │   │   ├── AciServiceTests.cs
-│       │   │   └── ProviderOptionsServiceTests.cs
-│       │   └── Commands/
-│       │       └── CommandTests.cs
-│       └── Integration/
-│           └── AciProviderIntegrationTests.cs
-│
-├── provider.yaml
-├── hack/
-│   ├── build.sh
-│   ├── build.ps1
-│   └── release.sh
-├── samples/
-│   ├── dotnet-hello-world/
-│   │   ├── .devcontainer/
-│   │   │   └── devcontainer.json
-│   │   ├── HelloWorld.csproj
-│   │   ├── Program.cs
-│   │   └── README.md
-│   └── aspire-sample/
-│       ├── .devcontainer/
-│       │   └── devcontainer.json
-│       └── AspireSample.AppHost/
-├── docs/
-│   ├── README.md
-│   ├── ARCHITECTURE.md
-│   └── DEVELOPMENT.md
-├── .github/
-│   └── workflows/
-│       ├── build.yml
-│       ├── test.yml
-│       └── release.yml
-├── DevPod.Provider.ACI.sln
-├── global.json
-├── Directory.Build.props
-├── .editorconfig
-├── .gitignore
-└── README.md
-```
+- `WORKSPACE_IMAGE` is required for `create`
+- Local-path and git workspaces are intentionally rejected
+- Private VNet/subnet deployment is intentionally rejected
+- The hello-world smoke test uses a published container image, not the sample folder as a DevPod source
+
+## Repository Highlights
+
+- `src/DevPod.Provider.ACI/`: provider implementation
+- `src/DevPod.Provider.ACI.Tests/`: unit and integration-style tests
+- `samples/dotnet-hello-world/`: sample ASP.NET app plus image build assets
+- `tests/e2e/README.md`: manual smoke-test walkthrough
+- `provider.yaml`: DevPod provider manifest
 
 ## Prerequisites
 
 - .NET 8 SDK
-- Azure CLI (optional, for CLI-based authentication)
-- DevPod CLI for testing
+- Azure CLI for interactive Azure auth, or service principal credentials
+- DevPod CLI
+- Docker only if you want to build/publish the sample image yourself
 
-## Building from Source
+## Build
 
 ### Linux/macOS
+
 ```bash
 ./hack/build.sh
 ```
 
 ### Windows
+
 ```bash
 ./hack/build.ps1
 ```
 
 ### Manual Build
+
 ```bash
 dotnet build DevPod.Provider.ACI.sln
 dotnet publish src/DevPod.Provider.ACI/DevPod.Provider.ACI.csproj -c Release -o dist/
 ```
 
-## Testing
+## Test
 
-### Unit Tests
 ```bash
 dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj
 ```
 
-### Integration Tests
-Integration tests require Azure credentials and may create actual resources:
+## Local Provider Install
 
 ```bash
-# Set up Azure credentials
-az login
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-export AZURE_RESOURCE_GROUP="test-rg"
-export AZURE_REGION="eastus"
-
-# Run integration tests
-dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj --filter Category=Integration
-```
-
-## Local Development and Testing
-
-### Install Local Provider
-```bash
-# Build the provider first
 ./hack/build.sh
-
-# Add the local provider to DevPod
 devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
-### Test with DevPod
+## Manual Smoke Test
+
+Use a published image source:
+
 ```bash
-# Set required Azure environment variables
 export AZURE_SUBSCRIPTION_ID="your-subscription-id"
 export AZURE_RESOURCE_GROUP="devpod-test-rg"
 export AZURE_REGION="eastus"
 
-# Create a workspace
-devpod up ./samples/dotnet-hello-world --provider aci-local
-
-# Test provider commands directly
-./dist/devpod-provider-aci init
-./dist/devpod-provider-aci create
-./dist/devpod-provider-aci status
+devpod up ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest \
+  --provider aci-local \
+  --workspace aci-hello \
+  --ide none
 ```
 
-## Debug Mode
+Then validate the running app:
 
-Enable debug logging by setting the environment variable:
+```bash
+devpod ssh aci-hello
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS http://127.0.0.1:8080/
+exit
+```
+
+## Sample Image Publishing
+
+The sample app has a Dockerfile at `samples/dotnet-hello-world/Dockerfile`.
+
+Build it locally:
+
+```bash
+docker build -t ghcr.io/<your-org>/devpod-provider-aci-hello-world:dev samples/dotnet-hello-world
+```
+
+The repository also includes a GitHub Actions workflow that can publish the sample image to GHCR.
+
+## Debug Logging
 
 ```bash
 export DEVPOD_DEBUG=true
@@ -161,21 +102,4 @@ export DEVPOD_DEBUG=true
 
 ## Architecture
 
-For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run tests and ensure they pass
-6. Submit a pull request
-
-## Release Process
-
-1. Render release artifacts: `./hack/release.sh <version>`
-2. Verify and publish the generated assets in `dist/` (use `--publish` to upload via `gh` automatically)
-3. Create a git tag: `git tag v<version>`
-4. Push the tag: `git push origin v<version>`
-5. Let the CI pipeline pick up the tag and validate the release
+For architecture notes, see [ARCHITECTURE.md](./ARCHITECTURE.md) and [command-execution-flow.md](./command-execution-flow.md).

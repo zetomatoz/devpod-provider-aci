@@ -93,15 +93,6 @@ options:
     - OnFailure
     - Never
   
-  # Network Configuration
-  ACI_VNET_NAME:
-    description: Virtual network name (for private container groups)
-    required: false
-  
-  ACI_SUBNET_NAME:
-    description: Subnet name within the virtual network
-    required: false
-  
   ACI_DNS_LABEL:
     description: DNS name label for public container groups
     required: false
@@ -164,7 +155,7 @@ options:
   AGENT_PATH:
     description: The path where to inject the DevPod agent
     required: false
-    default: /home/devpod/.devpod
+    default: /tmp/devpod
   
   INACTIVITY_TIMEOUT:
     description: Automatically delete the container after inactivity period
@@ -210,8 +201,6 @@ optionGroups:
   
   - name: Network Configuration
     options:
-    - ACI_VNET_NAME
-    - ACI_SUBNET_NAME
     - ACI_DNS_LABEL
     defaultVisible: false
   
@@ -250,10 +239,6 @@ optionGroups:
 
 agent:
   path: ${AGENT_PATH}
-  driver: docker
-  docker:
-    path: /usr/local/bin/docker
-    install: false
   inactivityTimeout: ${INACTIVITY_TIMEOUT}
   injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
   injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}

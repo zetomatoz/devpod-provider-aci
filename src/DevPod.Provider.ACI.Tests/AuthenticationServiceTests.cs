@@ -1,4 +1,5 @@
 using Azure.Identity;
+using Azure.ResourceManager.Resources;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevPod.Provider.ACI.Tests;
@@ -64,5 +65,25 @@ public class AuthenticationServiceTests
 
         ReferenceEquals(c1, c2).Should().BeTrue();
     }
-}
 
+    [Fact]
+    public void GetSubscriptionResource_UsesConfiguredSubscriptionId()
+    {
+        var options = new ProviderOptions
+        {
+            AzureSubscriptionId = "00000000-0000-0000-0000-000000000123",
+        };
+
+        var optionsSvc = new Mock<IProviderOptionsService>();
+        optionsSvc.Setup(s => s.GetOptions()).Returns(options);
+
+        var svc = new AuthenticationService(
+            NullLogger<AuthenticationService>.Instance,
+            optionsSvc.Object);
+
+        var subscription = svc.GetSubscriptionResource();
+
+        subscription.Id.Should().Be(
+            SubscriptionResource.CreateResourceIdentifier(options.AzureSubscriptionId));
+    }
+}

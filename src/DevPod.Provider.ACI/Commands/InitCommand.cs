@@ -29,12 +29,12 @@ public class InitCommand(
 
             // Test Azure connection
             logger.LogInformation("Testing Azure connection...");
-            var armClient = await authService.GetArmClientAsync();
-            var subscription = await armClient.GetDefaultSubscriptionAsync();
+            var subscriptionResource = authService.GetSubscriptionResource();
+            var subscription = await subscriptionResource.GetAsync();
 
-            logger.LogInformation("Successfully connected to Azure subscription: {DisplayName}", subscription.Data.DisplayName);
+            logger.LogInformation("Successfully connected to Azure subscription: {DisplayName}", subscription.Value.Data.DisplayName);
             Console.WriteLine($"Azure Container Instances provider initialized successfully");
-            Console.WriteLine($"Subscription: {subscription.Data.DisplayName}");
+            Console.WriteLine($"Subscription: {subscription.Value.Data.DisplayName}");
             Console.WriteLine($"Resource Group: {options.AzureResourceGroup}");
             Console.WriteLine($"Region: {options.AzureRegion}");
 

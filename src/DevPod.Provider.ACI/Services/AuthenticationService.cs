@@ -1,6 +1,7 @@
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Azure.ResourceManager.Resources;
 using Microsoft.Extensions.Logging;
 
 namespace DevPod.Provider.ACI.Services;
@@ -14,14 +15,7 @@ public class AuthenticationService(
 
     public async Task<ArmClient> GetArmClientAsync()
     {
-        if (_armClient == null)
-        {
-            var credential = GetCredential();
-            _armClient = new ArmClient(credential);
-            logger.LogDebug("Created Azure ARM client");
-        }
-
-        return _armClient;
+        return await Task.FromResult(EnsureArmClient());
     }
 
     public TokenCredential GetCredential()
@@ -55,5 +49,30 @@ public class AuthenticationService(
         }
 
         return _credential;
+    }
+
+    public SubscriptionResource GetSubscriptionResource()
+    {
+        var options = optionsService.GetOptions();
+        if (string.IsNullOrWhiteSpace(options.AzureSubscriptionId))
+        {
+            throw new InvalidOperationException("AZURE_SUBSCRIPTION_ID is required");
+        }
+
+        var armClient = EnsureArmClient();
+        return armClient.GetSubscriptionResource(
+            SubscriptionResource.CreateResourceIdentifier(options.AzureSubscriptionId));
+    }
+
+    private ArmClient EnsureArmClient()
+    {
+        if (_armClient == null)
+        {
+            var credential = GetCredential();
+            _armClient = new ArmClient(credential);
+            logger.LogDebug("Created Azure ARM client");
+        }
+
+        return _armClient;
     }
 }

@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 
 namespace DevPod.Provider.ACI.Commands;
 
-public class CommandCommand(
-    ILogger<CommandCommand> logger,
+public class ExecCommand(
+    ILogger<ExecCommand> logger,
     IProviderOptionsService optionsService,
     IAciService aciService)
 {

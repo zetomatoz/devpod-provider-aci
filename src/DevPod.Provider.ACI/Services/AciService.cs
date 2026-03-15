@@ -68,14 +68,13 @@ public class AciService : IAciService
     {
         _logger.LogInformation("Creating container group: {ContainerGroupName}", definition.Name);
 
-        var armClient = await _authService.GetArmClientAsync();
         var options = _optionsService.GetOptions();
 
         // Get or create resource group
-        var resourceGroup = await GetOrCreateResourceGroupAsync(armClient, options);
+        var resourceGroup = await GetOrCreateResourceGroupAsync(options);
 
         // Build container group data
-        var containerGroupData = await BuildContainerGroupDataAsync(definition, resourceGroup);
+        var containerGroupData = BuildContainerGroupData(definition);
 
         // Create container group
         var containerGroupCollection = resourceGroup.GetContainerGroups();
@@ -254,9 +253,9 @@ public class AciService : IAciService
         return (fqdn, ipAddress);
     }
 
-    private async Task<ResourceGroupResource> GetOrCreateResourceGroupAsync(ArmClient armClient, ProviderOptions options)
+    private async Task<ResourceGroupResource> GetOrCreateResourceGroupAsync(ProviderOptions options)
     {
-        var subscription = await armClient.GetDefaultSubscriptionAsync();
+        var subscription = _authService.GetSubscriptionResource();
         var resourceGroups = subscription.GetResourceGroups();
 
         try
@@ -278,9 +277,7 @@ public class AciService : IAciService
         }
     }
 
-    private async Task<ContainerGroupData> BuildContainerGroupDataAsync(
-        ContainerGroupDefinition definition,
-        ResourceGroupResource resourceGroup)
+    private ContainerGroupData BuildContainerGroupData(ContainerGroupDefinition definition)
     {
         var location = new AzureLocation(definition.Location);
         var options = _optionsService.GetOptions();
@@ -411,9 +408,8 @@ public class AciService : IAciService
     {
         try
         {
-            var armClient = await _authService.GetArmClientAsync();
             var options = _optionsService.GetOptions();
-            var subscription = await armClient.GetDefaultSubscriptionAsync();
+            var subscription = _authService.GetSubscriptionResource();
             var resourceGroup = await subscription.GetResourceGroupAsync(options.AzureResourceGroup);
             return await resourceGroup.Value.GetContainerGroupAsync(name);
         }
@@ -542,7 +538,10 @@ public class AciService : IAciService
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            if (buffer != null)
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         var stdoutInfo = StripExitInfo(stdout.ToString());

@@ -43,7 +43,7 @@ public class ProviderOptions
     public string? AciFileShareName { get; set; }
 
     // DevPod Agent Configuration
-    public string AgentPath { get; set; } = "/home/devpod/.devpod";
+    public string AgentPath { get; set; } = "/tmp/devpod";
     public string InactivityTimeout { get; set; } = "30m";
     public bool InjectGitCredentials { get; set; } = true;
     public bool InjectDockerCredentials { get; set; }

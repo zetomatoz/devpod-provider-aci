@@ -113,7 +113,7 @@ public class ProviderOptionsServiceTests
     }
 
     [Fact]
-    public void ValidateOptions_VnetWithoutSubnet_ReturnsError()
+    public void ValidateOptions_PrivateNetworking_ReturnsUnsupportedError()
     {
         var logger = NullLogger<ProviderOptionsService>.Instance;
         var svc = new ProviderOptionsService(logger);
@@ -125,12 +125,12 @@ public class ProviderOptionsServiceTests
             AciCpuCores = 1.0,
             AciMemoryGb = 2.0,
             AciVnetName = "vnet",
-            AciSubnetName = null,
+            AciSubnetName = "subnet-a",
         };
 
         var valid = svc.ValidateOptions(options, out var errors);
         valid.Should().BeFalse();
-        errors.Should().Contain(e => e.Contains("ACI_SUBNET_NAME"));
+        errors.Should().Contain(e => e.Contains("not supported in the current direct ACI workflow"));
     }
 
     [Fact]

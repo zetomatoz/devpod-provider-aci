@@ -14,6 +14,9 @@ public class CreateCommandRegistryAuthTests
 
         var optionsSvc = new Mock<IProviderOptionsService>();
         optionsSvc.Setup(o => o.GetOptions()).Returns(options);
+        var noErrors = new List<string>();
+        optionsSvc.Setup(o => o.ValidateOptions(It.IsAny<ProviderOptions>(), out noErrors))
+            .Returns(true);
 
         var aciSvc = new Mock<IAciService>();
         aciSvc.Setup(a => a.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()))
@@ -43,6 +46,8 @@ public class CreateCommandRegistryAuthTests
     [Fact]
     public async Task ManagedIdentity_Mode_DoesNotAttachRegistryCredentials()
     {
+        using var env = new WorkspaceImageScope();
+
         var opts = new ProviderOptions
         {
             AzureSubscriptionId = "sub",
@@ -69,6 +74,8 @@ public class CreateCommandRegistryAuthTests
     [Fact]
     public async Task KeyVault_Mode_AttachesCredentials_FromSecretService()
     {
+        using var env = new WorkspaceImageScope();
+
         var opts = new ProviderOptions
         {
             AzureSubscriptionId = "sub",
@@ -99,6 +106,8 @@ public class CreateCommandRegistryAuthTests
     [Fact]
     public async Task UsernamePassword_Mode_AttachesCredentials_FromOptions()
     {
+        using var env = new WorkspaceImageScope();
+
         var opts = new ProviderOptions
         {
             AzureSubscriptionId = "sub",
@@ -124,5 +133,23 @@ public class CreateCommandRegistryAuthTests
         captured!.RegistryCredentials.Should().NotBeNull();
         captured.RegistryCredentials!.Username.Should().Be("user");
         captured.RegistryCredentials.Password.Should().Be("pass");
+    }
+
+    private sealed class WorkspaceImageScope : IDisposable
+    {
+        private readonly string? _originalImage = Environment.GetEnvironmentVariable("WORKSPACE_IMAGE");
+        private readonly string? _originalSource = Environment.GetEnvironmentVariable("WORKSPACE_SOURCE");
+
+        public WorkspaceImageScope()
+        {
+            Environment.SetEnvironmentVariable("WORKSPACE_IMAGE", "ghcr.io/acme/devpod-provider-aci-hello-world:latest");
+            Environment.SetEnvironmentVariable("WORKSPACE_SOURCE", null);
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable("WORKSPACE_IMAGE", _originalImage);
+            Environment.SetEnvironmentVariable("WORKSPACE_SOURCE", _originalSource);
+        }
     }
 }

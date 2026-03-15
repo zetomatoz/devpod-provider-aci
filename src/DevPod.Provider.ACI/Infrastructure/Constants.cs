@@ -35,8 +35,7 @@ public static class Constants
         public const double CpuCores = 2.0;
         public const double MemoryGb = 4.0;
         public const string RestartPolicy = "Never";
-        public const string AgentPath = "/home/devpod/.devpod";
+        public const string AgentPath = "/tmp/devpod";
         public const string InactivityTimeout = "30m";
-        public const string BaseImage = "mcr.microsoft.com/devcontainers/base:ubuntu";
     }
 }

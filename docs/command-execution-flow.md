@@ -2,12 +2,12 @@
 
 ## End-to-End Walkthrough
 
-1. **Create** – From VS Code, DevPod CLI asks the provider to create an environment. CreateCommand provisions an ACI container group, mounts storage, opens port 22, and boots the workspace image thanks to the Azure ARM SDK.
+1. **Create** – DevPod CLI invokes `create` with a published workspace image. CreateCommand validates that the request is image-backed, rejects unsupported local-path/git/private-network flows, and provisions an ACI container group from that image.
 2. **Status lifecycle** – status, start, and stop commands keep DevPod informed about the container’s health so the VS Code extension knows when the environment is ready.
 3. **Agent injection** – Once the container is running, DevPod triggers the command handler with a devpod agent payload. The new exec pipeline asks Azure for an exec session, upgrades to the WebSocket URI, and streams stdout/stderr while watching the sentinel exit code. That lets DevPod push its agent into the container without any SSH tunnel yet.
-4. **Editor connection** – After the agent is installed, DevPod coordinates the VS Code tunnel using the exposed SSH port or agent channel. Because command exec is functional, the agent can start the VS Code server (or other tooling) inside the container, which your local VS Code front-end connects to for remote editing/debugging.
+4. **Editor connection** – After the agent is installed, DevPod connects to the running ACI-backed workspace through the injected agent path. In the current release, the provider is intended for published image workspaces rather than general `.devcontainer` feature execution.
 
-From the user perspective: run DevPod in VS Code, pick this provider, and it creates the ACI container, injects the DevPod agent through the WebSocket-backed exec, then VS Code attaches to the agent-managed tunnel for a seamless remote development session.
+From the user perspective: run `devpod up <published-image> --provider <aci-provider>`, let the provider create the ACI container group, then let DevPod inject and use the agent through the ACI exec WebSocket.
 
 ## Sequence Overview
 
@@ -15,7 +15,7 @@ From the user perspective: run DevPod in VS Code, pick this provider, and it cre
 sequenceDiagram
     participant DevPodCLI as DevPod CLI
     participant ProviderCLI as devpod-provider-aci
-    participant CommandCmd as CommandCommand
+    participant CommandCmd as ExecCommand
     participant AciSvc as AciService
     participant AzureACI as Azure Container Instance
     participant AgentWS as Exec WebSocket
@@ -37,7 +37,7 @@ sequenceDiagram
 ```mermaid
 graph LR
     DevPodClient[DevPod CLI] --> ProviderBinary[devpod-provider-aci CLI]
-    ProviderBinary --> CommandLayer[CommandCommand.cs]
+    ProviderBinary --> CommandLayer[ExecCommand.cs]
     CommandLayer --> ServiceLayer[AciService.cs]
     ServiceLayer --> SDK[Azure ARM SDK<br/>ContainerGroupResource]
     SDK --> AzureACI[(Azure Container Instance)]
