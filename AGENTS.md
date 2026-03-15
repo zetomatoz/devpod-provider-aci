@@ -36,3 +36,8 @@ For ACI specifically, this would involve:
 - Container Instance creation/deletion
 - Networking and storage configuration
 - Environment variable and secret management
+
+## Repository Hygiene
+
+- Never commit machine-specific absolute filesystem paths such as `/Users/...` into repository files.
+- Prefer repo-relative paths in documentation and generic paths in code examples so the repository stays portable across environments.

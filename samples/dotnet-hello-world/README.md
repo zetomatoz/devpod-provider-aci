@@ -25,4 +25,12 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
 docker push ghcr.io/<your-org>/devpod-provider-aci-hello-world:dev
 ```
 
+After pushing the image, use that exact image reference as `HELLO_WORLD_IMAGE` in the e2e guide.
+
+Example:
+
+```bash
+export HELLO_WORLD_IMAGE="ghcr.io/<your-org>/devpod-provider-aci-hello-world:dev"
+```
+
 The repository also includes a GitHub Actions workflow to publish the sample image automatically.

@@ -23,7 +23,35 @@ az login
 az account set --subscription "<SUBSCRIPTION_ID>"
 ```
 
-Export the required provider settings:
+## 2. Make Sure the Hello World Image Exists
+
+This guide assumes `HELLO_WORLD_IMAGE` points to a container image that already exists in a registry accessible from Azure Container Instances.
+
+You have two options:
+
+- Use a published sample image tag if you already have one available.
+- Build and push your own image first by following [samples/dotnet-hello-world/README.md](../../samples/dotnet-hello-world/README.md), then set `HELLO_WORLD_IMAGE` to that pushed image reference.
+
+If the image does not exist yet, `devpod up` will fail during the ACI image pull step.
+
+## 3. Configure Persistent Environment Variables
+
+If you do not want to re-export variables in every new terminal session, add them to your shell startup file once.
+
+For `zsh`:
+
+```bash
+cat <<'EOF' >> ~/.zshrc
+export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
+export AZURE_RESOURCE_GROUP="devpod-aci-e2e"
+export AZURE_REGION="westus2"
+export HELLO_WORLD_IMAGE="ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest"
+EOF
+
+source ~/.zshrc
+```
+
+If you prefer not to keep these globally in your shell profile, you can export them manually in the current terminal instead:
 
 ```bash
 export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
@@ -34,7 +62,7 @@ export HELLO_WORLD_IMAGE="ghcr.io/zetomatoz/devpod-provider-aci-hello-world:late
 
 The provider will create the resource group automatically if it does not already exist.
 
-## 2. Build and Register the Provider
+## 4. Build and Register the Provider
 
 Use the local packaging script, not plain `dotnet publish`.
 
@@ -48,7 +76,7 @@ Why this step matters:
 - `dotnet build` compiles the provider code
 - `./hack/build.sh` packages the provider for DevPod
 - `./hack/build.sh` calls `hack/render_provider.py`
-- `hack/render_provider.py` transforms [provider.yaml](/Users/Thomas_1/Sites/devpod-provider-aci/provider.yaml) into `dist/provider-local.yaml` by substituting binary paths and checksums
+- `hack/render_provider.py` transforms [provider.yaml](../../provider.yaml) into `dist/provider-local.yaml` by substituting binary paths and checksums
 
 If `dist/provider-local.yaml` does not exist, DevPod has nothing concrete to install locally.
 
@@ -59,7 +87,7 @@ dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj
 dotnet build DevPod.Provider.ACI.sln
 ```
 
-## 3. Launch the Workspace
+## 5. Launch the Workspace
 
 Use the published image as the DevPod source:
 
@@ -77,7 +105,7 @@ Expected behavior:
 - DevPod injects the agent using the provider `command` hook and the ACI exec WebSocket
 - The workspace reaches a ready state
 
-## 4. Validate the Running App
+## 6. Validate the Running App
 
 Open a shell in the workspace and hit the sample app:
 
@@ -101,7 +129,7 @@ You can also check provider-managed lifecycle state:
 devpod status aci-hello
 ```
 
-## 5. Clean Up
+## 7. Clean Up
 
 ```bash
 devpod delete aci-hello
@@ -117,6 +145,6 @@ az group delete --name "$AZURE_RESOURCE_GROUP" --yes --no-wait
 
 - If `devpod provider add ./dist/provider-local.yaml --name aci-local` fails, confirm `./hack/build.sh` completed and that `dist/provider-local.yaml` exists.
 - If Azure auth fails, re-run `az login` and confirm `AZURE_SUBSCRIPTION_ID` matches the intended subscription.
-- If the image pull fails, confirm the image exists and the registry auth mode is configured correctly.
+- If the image pull fails, confirm `HELLO_WORLD_IMAGE` points to an image that already exists and that the registry auth mode is configured correctly.
 - If `create` fails immediately, check whether `WORKSPACE_IMAGE` is set and that you are not using a git or local-path workspace source.
 - For verbose provider logs, export `DEVPOD_DEBUG=true` before `devpod up`.

@@ -64,12 +64,12 @@ Those commands do not render `dist/provider-local.yaml`, so they are not enough 
 
 ### How `provider.yaml` Becomes `dist/provider-local.yaml`
 
-The source manifest at [provider.yaml](/Users/Thomas_1/Sites/devpod-provider-aci/provider.yaml) contains placeholders such as:
+The source manifest at [provider.yaml](../provider.yaml) contains placeholders such as:
 
 - `${BINARY_LINUX_AMD64}`
 - `${CHECKSUM_LINUX_AMD64}`
 
-The script [hack/render_provider.py](/Users/Thomas_1/Sites/devpod-provider-aci/hack/render_provider.py) reads `provider.yaml` as a template and substitutes those placeholders using environment variables prepared by `./hack/build.sh`.
+The script [hack/render_provider.py](../hack/render_provider.py) reads `provider.yaml` as a template and substitutes those placeholders using environment variables prepared by `./hack/build.sh`.
 
 That is why the local install flow must use `./hack/build.sh` rather than plain `dotnet publish`.
 
