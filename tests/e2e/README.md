@@ -4,7 +4,7 @@ This guide validates the current provider contract: a published image workspace 
 
 Important constraints for this release:
 
-- Use a published image source such as `ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest`
+- Use a published image source such as `ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest`
 - Do not use `devpod up ./samples/dotnet-hello-world`
 - Do not use git or local-path sources
 - Do not set `ACI_VNET_NAME` or `ACI_SUBNET_NAME`
@@ -32,6 +32,12 @@ You have two options:
 - Use a published sample image tag if you already have one available.
 - Build and push your own image first by following [samples/dotnet-hello-world/README.md](../../samples/dotnet-hello-world/README.md), then set `HELLO_WORLD_IMAGE` to that pushed image reference.
 
+If you are using the repository GitHub Actions workflow, the published image name is:
+
+```bash
+ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest
+```
+
 If the image does not exist yet, `devpod up` will fail during the ACI image pull step.
 
 ## 3. Configure Persistent Environment Variables
@@ -45,7 +51,7 @@ cat <<'EOF' >> ~/.zshrc
 export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
 export AZURE_RESOURCE_GROUP="devpod-aci-e2e"
 export AZURE_REGION="westus2"
-export HELLO_WORLD_IMAGE="ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest"
+export HELLO_WORLD_IMAGE="ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest"
 EOF
 
 source ~/.zshrc
@@ -57,7 +63,7 @@ If you prefer not to keep these globally in your shell profile, you can export t
 export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
 export AZURE_RESOURCE_GROUP="devpod-aci-e2e"
 export AZURE_REGION="westus2"
-export HELLO_WORLD_IMAGE="ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest"
+export HELLO_WORLD_IMAGE="ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest"
 ```
 
 The provider will create the resource group automatically if it does not already exist.

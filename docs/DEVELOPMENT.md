@@ -129,10 +129,17 @@ The sample app has a Dockerfile at `samples/dotnet-hello-world/Dockerfile`.
 Build it locally:
 
 ```bash
-docker build -t ghcr.io/<your-org>/devpod-provider-aci-hello-world:dev samples/dotnet-hello-world
+docker build -t ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest samples/dotnet-hello-world
 ```
 
 The repository also includes a GitHub Actions workflow that can publish the sample image to GHCR.
+
+That workflow publishes:
+
+- `ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest`
+- `ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:sha-<short-commit>`
+
+So if you are using the workflow-produced sample image, `HELLO_WORLD_IMAGE` should point at the `:latest` tag for the repository owner that published it.
 
 ## Debug Logging
 
