@@ -24,6 +24,7 @@ Not supported in this release:
 - Azure subscription with ACI enabled
 - Azure CLI logged in, or service principal credentials
 - .NET 8 SDK for local builds
+- Python 3 for manifest rendering during local provider packaging
 
 ## Installation
 
@@ -39,9 +40,18 @@ devpod provider add github.com/your-org/devpod-provider-aci
 git clone https://github.com/zetomatoz/devpod-provider-aci
 cd devpod-provider-aci
 
+# Build and package the provider for local DevPod installation.
+# This does more than dotnet build:
+# - publishes the provider binary for each supported platform
+# - computes SHA256 checksums
+# - renders dist/provider-local.yaml from provider.yaml
 ./hack/build.sh
+
+# Register the rendered local manifest with DevPod.
 devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
+
+`dotnet build` is still useful for normal development and compilation checks, but it does not produce the rendered DevPod manifest that `devpod provider add` expects.
 
 ## Hello World Smoke Test
 
@@ -52,7 +62,7 @@ export AZURE_SUBSCRIPTION_ID="<subscription-id>"
 export AZURE_RESOURCE_GROUP="devpod-aci-e2e"
 export AZURE_REGION="westus2"
 
-devpod up ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest \
+devpod up ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest \
   --provider aci-local \
   --workspace aci-hello \
   --ide none
@@ -62,6 +72,7 @@ Validate the running workspace:
 
 ```bash
 devpod ssh aci-hello
+ls -l /tmp/devpod
 curl -fsS http://127.0.0.1:8080/health
 curl -fsS http://127.0.0.1:8080/
 exit

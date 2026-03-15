@@ -22,28 +22,56 @@ This repository currently targets a direct ACI workflow for published workspace 
 - .NET 8 SDK
 - Azure CLI for interactive Azure auth, or service principal credentials
 - DevPod CLI
+- Python 3 for local manifest rendering
 - Docker only if you want to build/publish the sample image yourself
 
 ## Build
 
-### Linux/macOS
+There are two different build paths in this repository:
+
+- `dotnet build` or `dotnet publish`: compile the provider binary for normal development work
+- `./hack/build.sh`: package the provider for local DevPod usage by building binaries, generating checksums, and rendering a concrete provider manifest
+
+### Compile Only
+
+Use this when you only want to confirm the code builds:
+
+```bash
+dotnet build DevPod.Provider.ACI.sln
+```
+
+Use this when you want a single published binary for inspection:
+
+```bash
+dotnet publish src/DevPod.Provider.ACI/DevPod.Provider.ACI.csproj -c Release -o dist/
+```
+
+Those commands do not render `dist/provider-local.yaml`, so they are not enough on their own for `devpod provider add`.
+
+### Local DevPod Packaging
 
 ```bash
 ./hack/build.sh
 ```
 
-### Windows
+`./hack/build.sh` is the packaging script for local end-to-end testing. It:
 
-```bash
-./hack/build.ps1
-```
+- publishes self-contained binaries for each supported platform into `dist/`
+- generates SHA256 checksum files for those binaries
+- exports the paths and checksums as environment variables
+- calls `hack/render_provider.py`
+- writes `dist/provider-local.yaml`
 
-### Manual Build
+### How `provider.yaml` Becomes `dist/provider-local.yaml`
 
-```bash
-dotnet build DevPod.Provider.ACI.sln
-dotnet publish src/DevPod.Provider.ACI/DevPod.Provider.ACI.csproj -c Release -o dist/
-```
+The source manifest at [provider.yaml](/Users/Thomas_1/Sites/devpod-provider-aci/provider.yaml) contains placeholders such as:
+
+- `${BINARY_LINUX_AMD64}`
+- `${CHECKSUM_LINUX_AMD64}`
+
+The script [hack/render_provider.py](/Users/Thomas_1/Sites/devpod-provider-aci/hack/render_provider.py) reads `provider.yaml` as a template and substitutes those placeholders using environment variables prepared by `./hack/build.sh`.
+
+That is why the local install flow must use `./hack/build.sh` rather than plain `dotnet publish`.
 
 ## Test
 
@@ -58,29 +86,41 @@ dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj
 devpod provider add ./dist/provider-local.yaml --name aci-local
 ```
 
+## Recommended Local Verification Order
+
+```bash
+dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj
+dotnet build DevPod.Provider.ACI.sln
+./hack/build.sh
+devpod provider add ./dist/provider-local.yaml --name aci-local
+```
+
 ## Manual Smoke Test
 
-Use a published image source:
+Use a published image source. Do not use the sample folder itself as a DevPod workspace source.
 
 ```bash
 export AZURE_SUBSCRIPTION_ID="your-subscription-id"
 export AZURE_RESOURCE_GROUP="devpod-test-rg"
 export AZURE_REGION="eastus"
 
-devpod up ghcr.io/zetomatoz/devpod-provider-aci-hello-world:latest \
+devpod up ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest \
   --provider aci-local \
   --workspace aci-hello \
   --ide none
 ```
 
-Then validate the running app:
+Then validate both agent injection and the sample app:
 
 ```bash
 devpod ssh aci-hello
+ls -l /tmp/devpod
 curl -fsS http://127.0.0.1:8080/health
 curl -fsS http://127.0.0.1:8080/
 exit
 ```
+
+If `/tmp/devpod` exists and the HTTP checks succeed, the core create-plus-exec workflow is working.
 
 ## Sample Image Publishing
 
