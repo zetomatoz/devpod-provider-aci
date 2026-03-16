@@ -26,6 +26,12 @@ Not supported in this release:
 - .NET 8 SDK for local builds
 - Python 3 for manifest rendering during local provider packaging
 
+If the subscription has not used ACI before, register the resource provider once:
+
+```bash
+az provider register --namespace Microsoft.ContainerInstance
+```
+
 ## Installation
 
 ### Install from a release
@@ -63,8 +69,9 @@ export AZURE_RESOURCE_GROUP="devpod-aci-e2e"
 export AZURE_REGION="westus2"
 
 devpod up ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest \
+  --id aci-hello \
   --provider aci-local \
-  --workspace aci-hello \
+  --provider-option WORKSPACE_IMAGE=ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest \
   --ide none
 ```
 

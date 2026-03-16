@@ -21,6 +21,7 @@ Authenticate and select the subscription:
 ```bash
 az login
 az account set --subscription "<SUBSCRIPTION_ID>"
+az provider register --namespace Microsoft.ContainerInstance
 ```
 
 ## 2. Make Sure the Hello World Image Exists
@@ -95,18 +96,21 @@ dotnet build DevPod.Provider.ACI.sln
 
 ## 5. Launch the Workspace
 
-Use the published image as the DevPod source:
+Use the published image as the DevPod source and also pass it through as a provider option so the provider `create` hook can provision that exact image in ACI:
 
 ```bash
 devpod up "$HELLO_WORLD_IMAGE" \
+  --id aci-hello \
   --provider aci-local \
-  --workspace aci-hello \
+  --provider-option WORKSPACE_IMAGE="$HELLO_WORLD_IMAGE" \
   --ide none
 ```
 
 Expected behavior:
 
 - DevPod invokes `create`
+- DevPod uses the positional image source to define the workspace image-based source
+- `--provider-option WORKSPACE_IMAGE="$HELLO_WORLD_IMAGE"` passes the same image to the provider `create` hook
 - The provider provisions an ACI container group from `WORKSPACE_IMAGE`
 - DevPod injects the agent using the provider `command` hook and the ACI exec WebSocket
 - The workspace reaches a ready state
@@ -151,6 +155,8 @@ az group delete --name "$AZURE_RESOURCE_GROUP" --yes --no-wait
 
 - If `devpod provider add ./dist/provider-local.yaml --name aci-local` fails, confirm `./hack/build.sh` completed and that `dist/provider-local.yaml` exists.
 - If Azure auth fails, re-run `az login` and confirm `AZURE_SUBSCRIPTION_ID` matches the intended subscription.
+- If Azure returns `MissingSubscriptionRegistration`, run `az provider register --namespace Microsoft.ContainerInstance`, wait for registration to complete, and retry.
 - If the image pull fails, confirm `HELLO_WORLD_IMAGE` points to an image that already exists and that the registry auth mode is configured correctly.
-- If `create` fails immediately, check whether `WORKSPACE_IMAGE` is set and that you are not using a git or local-path workspace source.
+- If Azure returns `ImageOsTypeNotMatchContainerGroup`, rebuild and republish the sample image as `linux/amd64`. An Apple Silicon `docker build` without `--platform linux/amd64` will usually push an incompatible `linux/arm64` image.
+- If `create` fails immediately, confirm you passed `--provider-option WORKSPACE_IMAGE="$HELLO_WORLD_IMAGE"` and that you are not using a git or local-path workspace source.
 - For verbose provider logs, export `DEVPOD_DEBUG=true` before `devpod up`.

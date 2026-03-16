@@ -90,7 +90,7 @@
   <!-- Sample Project Configuration -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('samples'))">
     <IsPackable>false</IsPackable>
-    <IsPublishable>false</IsPublishable>
+    <IsPublishable>true</IsPublishable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 

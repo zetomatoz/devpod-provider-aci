@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Azure;
 using DevPod.Provider.ACI.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -270,6 +271,108 @@ public class CreateCommandIntegrationTests
 
         stderr.ToString().Should().Contain("not supported in the current direct ACI workflow");
         aciServiceMock.Verify(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithMissingContainerInstanceRegistration_ShowsActionableGuidance()
+    {
+        using var env = new EnvironmentVariableScope(new Dictionary<string, string?>
+        {
+            ["AZURE_SUBSCRIPTION_ID"] = "00000000-0000-0000-0000-000000000000",
+            ["AZURE_RESOURCE_GROUP"] = "rg",
+            ["AZURE_REGION"] = "eastus",
+            ["MACHINE_ID"] = "machine-abc",
+            ["WORKSPACE_IMAGE"] = "ghcr.io/acme/hello-world:latest",
+        });
+
+        var optionsService = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var aciServiceMock = new Mock<IAciService>();
+        aciServiceMock
+            .Setup(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()))
+            .ThrowsAsync(new RequestFailedException(
+                409,
+                "The subscription is not registered to use namespace 'Microsoft.ContainerInstance'.",
+                "MissingSubscriptionRegistration",
+                null));
+
+        var services = new ServiceCollection();
+        services
+            .AddSingleton(NullLoggerFactory.Instance)
+            .AddLogging()
+            .AddSingleton<IProviderOptionsService>(optionsService)
+            .AddSingleton(aciServiceMock.Object)
+            .AddSingleton(new Mock<ISecretService>().Object)
+            .AddTransient<CreateCommand>();
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        var command = serviceProvider.GetRequiredService<CreateCommand>();
+
+        var originalErr = Console.Error;
+        using var stderr = new StringWriter();
+        Console.SetError(stderr);
+
+        try
+        {
+            var exitCode = await command.ExecuteAsync();
+            exitCode.Should().Be(1);
+        }
+        finally
+        {
+            Console.SetError(originalErr);
+        }
+
+        stderr.ToString().Should().Contain("az provider register --namespace Microsoft.ContainerInstance");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithImageOsMismatch_ShowsLinuxAmd64Guidance()
+    {
+        using var env = new EnvironmentVariableScope(new Dictionary<string, string?>
+        {
+            ["AZURE_SUBSCRIPTION_ID"] = "00000000-0000-0000-0000-000000000000",
+            ["AZURE_RESOURCE_GROUP"] = "rg",
+            ["AZURE_REGION"] = "eastus",
+            ["MACHINE_ID"] = "machine-abc",
+            ["WORKSPACE_IMAGE"] = "ghcr.io/acme/hello-world:latest",
+        });
+
+        var optionsService = new ProviderOptionsService(NullLogger<ProviderOptionsService>.Instance);
+        var aciServiceMock = new Mock<IAciService>();
+        aciServiceMock
+            .Setup(s => s.CreateContainerGroupAsync(It.IsAny<ContainerGroupDefinition>()))
+            .ThrowsAsync(new RequestFailedException(
+                400,
+                "The container image 'ghcr.io/acme/hello-world:latest' doesn't support specified OS 'Linux' for container group 'devpod-test'.",
+                "ImageOsTypeNotMatchContainerGroup",
+                null));
+
+        var services = new ServiceCollection();
+        services
+            .AddSingleton(NullLoggerFactory.Instance)
+            .AddLogging()
+            .AddSingleton<IProviderOptionsService>(optionsService)
+            .AddSingleton(aciServiceMock.Object)
+            .AddSingleton(new Mock<ISecretService>().Object)
+            .AddTransient<CreateCommand>();
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        var command = serviceProvider.GetRequiredService<CreateCommand>();
+
+        var originalErr = Console.Error;
+        using var stderr = new StringWriter();
+        Console.SetError(stderr);
+
+        try
+        {
+            var exitCode = await command.ExecuteAsync();
+            exitCode.Should().Be(1);
+        }
+        finally
+        {
+            Console.SetError(originalErr);
+        }
+
+        stderr.ToString().Should().Contain("linux/amd64");
     }
 
     private sealed class EnvironmentVariableScope : IDisposable

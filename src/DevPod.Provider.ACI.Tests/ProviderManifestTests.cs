@@ -13,6 +13,7 @@ public class ProviderManifestTests
         manifest.Should().NotContain("ACI_SUBNET_NAME:");
         manifest.Should().Contain("ACI_DNS_LABEL:");
         manifest.Should().Contain("AGENT_PATH");
+        manifest.Should().Contain("WORKSPACE_IMAGE:");
     }
 
     private static string GetRepositoryRoot()

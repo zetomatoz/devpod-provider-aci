@@ -48,7 +48,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         .AddSingleton(configuration)
         .AddLogging(builder =>
         {
-            builder.AddConsole();
+            // Keep stdout reserved for DevPod protocol output such as status tokens.
+            builder.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
             builder.SetMinimumLevel(LogLevel.Information);
 
             // Check for debug mode

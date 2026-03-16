@@ -180,6 +180,10 @@ options:
     - Machine
     - Workspace
 
+  WORKSPACE_IMAGE:
+    description: Published image reference to provision in ACI for the current workspace
+    required: false
+
 optionGroups:
   - name: Azure Authentication
     options:
@@ -236,6 +240,11 @@ optionGroups:
     - ACI_PROVIDER_SETUP
     - ACI_CONTAINER_GROUP_NAME
     defaultVisible: false
+
+  - name: Workspace Image
+    options:
+    - WORKSPACE_IMAGE
+    defaultVisible: true
 
 agent:
   path: ${AGENT_PATH}

@@ -25,6 +25,12 @@ This repository currently targets a direct ACI workflow for published workspace 
 - Python 3 for local manifest rendering
 - Docker only if you want to build/publish the sample image yourself
 
+If the subscription has not used ACI before, register the resource provider once:
+
+```bash
+az provider register --namespace Microsoft.ContainerInstance
+```
+
 ## Build
 
 There are two different build paths in this repository:
@@ -105,8 +111,9 @@ export AZURE_RESOURCE_GROUP="devpod-test-rg"
 export AZURE_REGION="eastus"
 
 devpod up ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest \
+  --id aci-hello \
   --provider aci-local \
-  --workspace aci-hello \
+  --provider-option WORKSPACE_IMAGE=ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest \
   --ide none
 ```
 

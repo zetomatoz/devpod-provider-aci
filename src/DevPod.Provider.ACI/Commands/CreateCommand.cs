@@ -1,3 +1,4 @@
+using Azure;
 using DevPod.Provider.ACI.Models;
 using DevPod.Provider.ACI.Services;
 using Microsoft.Extensions.Logging;
@@ -153,7 +154,7 @@ public class CreateCommand(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create container group");
-            Console.Error.WriteLine($"Create failed: {ex.Message}");
+            Console.Error.WriteLine($"Create failed: {DescribeCreateFailure(ex)}");
             return 1;
         }
     }
@@ -201,5 +202,24 @@ public class CreateCommand(
         {
             definition.EnvironmentVariables[name] = value;
         }
+    }
+
+    private static string DescribeCreateFailure(Exception ex)
+    {
+        if (ex is RequestFailedException requestFailedException &&
+            requestFailedException.ErrorCode == "MissingSubscriptionRegistration" &&
+            requestFailedException.Message.Contains("Microsoft.ContainerInstance", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The Azure subscription is not registered for Microsoft.ContainerInstance. Run 'az provider register --namespace Microsoft.ContainerInstance' and wait for registration to complete, then retry.";
+        }
+
+        if (ex is RequestFailedException imageMismatchException &&
+            imageMismatchException.ErrorCode == "ImageOsTypeNotMatchContainerGroup" &&
+            imageMismatchException.Message.Contains("doesn't support specified OS 'Linux'", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The workspace image is not published as a Linux ACI-compatible image. Rebuild and republish it as 'linux/amd64', then retry.";
+        }
+
+        return ex.Message;
     }
 }
