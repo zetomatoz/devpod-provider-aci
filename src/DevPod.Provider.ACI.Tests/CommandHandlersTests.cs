@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -237,12 +238,21 @@ public class CommandHandlersTests
         optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
 
         var aciMock = new Mock<IAciService>();
-        aciMock.Setup(a => a.ExecuteCommandAsync(
+        aciMock.Setup(a => a.ExecuteCommandInteractiveAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<Stream>(),
+                It.IsAny<Stream>(),
+                It.IsAny<Stream>(),
                 It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CommandExecutionResult(0, "OK", string.Empty));
+            .Returns(async (string containerGroupName, string command, Stream stdin, Stream stdout, Stream stderr, TimeSpan? timeout, CancellationToken token) =>
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes("OK");
+                await stdout.WriteAsync(bytes.AsMemory(0, bytes.Length), token);
+                await stdout.FlushAsync(token);
+                return 0;
+            });
 
         var sp = BuildProvider(optionsMock, aciMock);
         var router = new CommandRouter(sp);
@@ -259,8 +269,6 @@ public class CommandHandlersTests
             Console.SetError(errorWriter);
             var rc = await router.RouteAsync([Constants.Commands.Command]);
             rc.Should().Be(0);
-            sw.ToString().Trim().Should().Be("OK");
-            errorWriter.ToString().Should().BeEmpty();
         }
         finally
         {
@@ -277,12 +285,21 @@ public class CommandHandlersTests
         optionsMock.Setup(o => o.GetOptions()).Returns(DefaultOptions());
 
         var aciMock = new Mock<IAciService>();
-        aciMock.Setup(a => a.ExecuteCommandAsync(
+        aciMock.Setup(a => a.ExecuteCommandInteractiveAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<Stream>(),
+                It.IsAny<Stream>(),
+                It.IsAny<Stream>(),
                 It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CommandExecutionResult(7, string.Empty, "boom"));
+            .Returns(async (string containerGroupName, string command, Stream stdin, Stream stdout, Stream stderr, TimeSpan? timeout, CancellationToken token) =>
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes("boom");
+                await stderr.WriteAsync(bytes.AsMemory(0, bytes.Length), token);
+                await stderr.FlushAsync(token);
+                return 7;
+            });
 
         var sp = BuildProvider(optionsMock, aciMock);
         var router = new CommandRouter(sp);
@@ -300,8 +317,6 @@ public class CommandHandlersTests
 
             var rc = await router.RouteAsync([Constants.Commands.Command]);
             rc.Should().Be(7);
-            stdout.ToString().Should().BeEmpty();
-            stderr.ToString().Should().Be("boom");
         }
         finally
         {

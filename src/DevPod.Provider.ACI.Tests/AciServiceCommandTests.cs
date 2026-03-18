@@ -19,6 +19,9 @@ namespace DevPod.Provider.ACI.Tests;
 
 public class AciServiceCommandTests
 {
+    private const string InteractiveShellCommand = "/bin/sh";
+    private const string ShellReadySentinel = "__ACI_SHELL_READY_SENTINEL_D9F3A1B2__";
+
     [Fact]
     public async Task ExecuteCommandAsync_ReturnsStdoutAndExitCode()
     {
@@ -33,6 +36,7 @@ public class AciServiceCommandTests
 
         var webSocketMessages = new[]
         {
+            FakeWebSocketMessage.Text($"{ShellReadySentinel}\n"),
             FakeWebSocketMessage.Text("hello\n"),
             FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:0\n"),
         };
@@ -50,9 +54,18 @@ public class AciServiceCommandTests
         result.Stderr.Should().BeEmpty();
 
         capturedContent.Should().NotBeNull();
-        capturedContent!.Command.Should().Contain("__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__");
+        capturedContent!.Command.Should().Be(InteractiveShellCommand);
 
-        fakeWebSocket.SentMessages.Should().Equal("pwd");
+        fakeWebSocket.SentFrames.Should().HaveCount(4);
+        fakeWebSocket.SentFrames[0].MessageType.Should().Be(WebSocketMessageType.Text);
+        fakeWebSocket.SentFrames[0].Payload.Should().Be("pwd");
+        fakeWebSocket.SentFrames[1].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[1].Payload.Should().Contain("stty -echo");
+        fakeWebSocket.SentFrames[2].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[2].Payload.Should().Contain(ShellReadySentinel);
+        fakeWebSocket.SentFrames[3].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[3].Payload.Should().Contain("echo hello");
+        fakeWebSocket.SentFrames[3].Payload.Should().Contain("__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__");
         fakeWebSocket.CloseRequested.Should().BeTrue();
     }
 
@@ -66,6 +79,7 @@ public class AciServiceCommandTests
 
         var webSocketMessages = new[]
         {
+            FakeWebSocketMessage.Text($"{ShellReadySentinel}\n"),
             FakeWebSocketMessage.Binary(2, "failure"),
             FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:23\n"),
         };
@@ -82,6 +96,143 @@ public class AciServiceCommandTests
         result.Stdout.Should().BeEmpty();
         result.Stderr.Should().Be("failure");
         capturedContent.Should().NotBeNull();
+        capturedContent!.Command.Should().Be(InteractiveShellCommand);
+    }
+
+    [Fact]
+    public async Task ExecuteCommandAsync_SendsComplexCommandViaStdin()
+    {
+        var containerData = CreateContainerGroupData("workspace");
+        ContainerExecContent? capturedContent = null;
+
+        var containerGroup = CreateContainerGroupMock(containerData, out _, (_, content, _) => capturedContent = content);
+
+        var webSocketMessages = new[]
+        {
+            FakeWebSocketMessage.Text($"{ShellReadySentinel}\n"),
+            FakeWebSocketMessage.Text($"\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:0\n"),
+        };
+
+        var fakeWebSocket = new FakeWebSocketClient(webSocketMessages);
+        var webSocketFactory = new Mock<IWebSocketClientFactory>();
+        webSocketFactory.Setup(f => f.Create()).Returns(fakeWebSocket);
+
+        var service = new TestAciService(containerGroup, webSocketFactory.Object);
+        var command = """
+                      printf '%s\n' "${HOME}"
+                      cat <<'EOF'
+                      quoted "text"
+                      EOF
+                      """;
+
+        var result = await service.ExecuteCommandAsync("devpod-group", command);
+
+        result.ExitCode.Should().Be(0);
+        capturedContent.Should().NotBeNull();
+        capturedContent!.Command.Should().Be(InteractiveShellCommand);
+        fakeWebSocket.SentFrames.Should().HaveCount(4);
+        fakeWebSocket.SentFrames[3].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[3].Payload.Should().Contain(command);
+    }
+
+    [Fact]
+    public async Task ExecuteCommandAsync_HandlesUnprefixedBinaryOutput()
+    {
+        var containerData = CreateContainerGroupData("workspace");
+        var containerGroup = CreateContainerGroupMock(containerData, out _, (_, _, _) => { });
+
+        var fakeWebSocket = new FakeWebSocketClient(
+            FakeWebSocketMessage.RawBinary($"{ShellReadySentinel}\n"),
+            FakeWebSocketMessage.RawBinary("hello\n"),
+            FakeWebSocketMessage.RawBinary("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:0\n"));
+
+        var webSocketFactory = new Mock<IWebSocketClientFactory>();
+        webSocketFactory.Setup(f => f.Create()).Returns(fakeWebSocket);
+
+        var service = new TestAciService(containerGroup, webSocketFactory.Object);
+
+        var result = await service.ExecuteCommandAsync("devpod-group", "echo hello");
+
+        result.ExitCode.Should().Be(0);
+        result.Stdout.Should().Be("hello\n");
+        result.Stderr.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteCommandInteractiveAsync_StreamsInputAndOutput()
+    {
+        var containerData = CreateContainerGroupData("workspace");
+        ContainerExecContent? capturedContent = null;
+
+        var containerGroup = CreateContainerGroupMock(containerData, out _, (_, content, _) => capturedContent = content);
+
+        var fakeWebSocket = new FakeWebSocketClient(
+            FakeWebSocketMessage.Text($"{ShellReadySentinel}\n"),
+            FakeWebSocketMessage.Text("ping\n"),
+            FakeWebSocketMessage.Text("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:0\n"));
+
+        var webSocketFactory = new Mock<IWebSocketClientFactory>();
+        webSocketFactory.Setup(f => f.Create()).Returns(fakeWebSocket);
+
+        var service = new TestAciService(containerGroup, webSocketFactory.Object);
+        await using var stdin = new MemoryStream(Encoding.UTF8.GetBytes("pong\n"));
+        await using var stdout = new MemoryStream();
+        await using var stderr = new MemoryStream();
+
+        var exitCode = await service.ExecuteCommandInteractiveAsync(
+            "devpod-group",
+            "echo ping\nread reply\nprintf \"%s\\n\" \"$reply\"",
+            stdin,
+            stdout,
+            stderr);
+
+        exitCode.Should().Be(0);
+        capturedContent.Should().NotBeNull();
+        capturedContent!.Command.Should().Be(InteractiveShellCommand);
+        Encoding.UTF8.GetString(stdout.ToArray()).Should().Be("ping\n");
+        Encoding.UTF8.GetString(stderr.ToArray()).Should().BeEmpty();
+        fakeWebSocket.SentFrames.Should().HaveCount(5);
+        fakeWebSocket.SentFrames[0].MessageType.Should().Be(WebSocketMessageType.Text);
+        fakeWebSocket.SentFrames[0].Payload.Should().Be("pwd");
+        fakeWebSocket.SentFrames[1].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[1].Payload.Should().Contain("stty -echo");
+        fakeWebSocket.SentFrames[2].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[2].Payload.Should().Contain(ShellReadySentinel);
+        fakeWebSocket.SentFrames[3].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[3].Payload.Should().Contain("read reply");
+        fakeWebSocket.SentFrames[4].MessageType.Should().Be(WebSocketMessageType.Binary);
+        fakeWebSocket.SentFrames[4].Payload.Should().Be("pong\n");
+    }
+
+    [Fact]
+    public async Task ExecuteCommandInteractiveAsync_FiltersShellReadyBannerFromRawBinaryOutput()
+    {
+        var containerData = CreateContainerGroupData("workspace");
+        var containerGroup = CreateContainerGroupMock(containerData, out _, (_, _, _) => { });
+
+        var fakeWebSocket = new FakeWebSocketClient(
+            FakeWebSocketMessage.RawBinary($"# {ShellReadySentinel}\r\n"),
+            FakeWebSocketMessage.RawBinary("ping\r\n"),
+            FakeWebSocketMessage.RawBinary("\n__ACI_EXIT_CODE_SENTINEL_D9F3A1B2__:0\n"));
+
+        var webSocketFactory = new Mock<IWebSocketClientFactory>();
+        webSocketFactory.Setup(f => f.Create()).Returns(fakeWebSocket);
+
+        var service = new TestAciService(containerGroup, webSocketFactory.Object);
+        await using var stdin = new MemoryStream();
+        await using var stdout = new MemoryStream();
+        await using var stderr = new MemoryStream();
+
+        var exitCode = await service.ExecuteCommandInteractiveAsync(
+            "devpod-group",
+            "echo ping",
+            stdin,
+            stdout,
+            stderr);
+
+        exitCode.Should().Be(0);
+        Encoding.UTF8.GetString(stdout.ToArray()).Should().Be("ping\r\n");
+        Encoding.UTF8.GetString(stderr.ToArray()).Should().BeEmpty();
     }
 
     private static ContainerGroupData CreateContainerGroupData(string containerName)
@@ -141,7 +292,12 @@ public class AciServiceCommandTests
             _messages = new Queue<FakeWebSocketMessage>(messages);
         }
 
-        public List<string> SentMessages { get; } = new List<string>();
+        public FakeWebSocketClient(params FakeWebSocketMessage[] messages)
+            : this((IEnumerable<FakeWebSocketMessage>)messages)
+        {
+        }
+
+        public List<SentFrame> SentFrames { get; } = new List<SentFrame>();
 
         public bool CloseRequested { get; private set; }
 
@@ -157,7 +313,7 @@ public class AciServiceCommandTests
                 ? Array.Empty<byte>()
                 : buffer.Array[buffer.Offset..(buffer.Offset + buffer.Count)];
 
-            SentMessages.Add(Encoding.UTF8.GetString(payload));
+            SentFrames.Add(new SentFrame(messageType, Encoding.UTF8.GetString(payload)));
             return Task.CompletedTask;
         }
 
@@ -212,7 +368,14 @@ public class AciServiceCommandTests
             Array.Copy(textBytes, 0, payload, 1, textBytes.Length);
             return new FakeWebSocketMessage(WebSocketMessageType.Binary, payload);
         }
+
+        public static FakeWebSocketMessage RawBinary(string text)
+        {
+            return new FakeWebSocketMessage(WebSocketMessageType.Binary, Encoding.UTF8.GetBytes(text));
+        }
     }
+
+    private sealed record SentFrame(WebSocketMessageType MessageType, string Payload);
 
     private sealed class FakeResponse : Response
     {

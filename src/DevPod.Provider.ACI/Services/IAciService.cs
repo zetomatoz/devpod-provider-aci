@@ -14,6 +14,14 @@ public interface IAciService
         string command,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default);
+    Task<int> ExecuteCommandInteractiveAsync(
+        string containerGroupName,
+        string command,
+        Stream stdin,
+        Stream stdout,
+        Stream stderr,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
     Task<string> GetContainerLogsAsync(string containerGroupName, string containerName);
     Task<(string Fqdn, string IpAddress)> GetContainerEndpointAsync(string name);
 }

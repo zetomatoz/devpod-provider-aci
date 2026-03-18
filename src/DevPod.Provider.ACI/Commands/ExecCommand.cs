@@ -43,20 +43,21 @@ public class ExecCommand(
             try
             {
                 logger.LogDebug("Executing command: {Command}", command);
-                var result = await aciService.ExecuteCommandAsync(containerGroupName, command, timeout, cts.Token);
+                await using var stdin = Console.OpenStandardInput();
+                await using var stdout = Console.OpenStandardOutput();
+                await using var stderr = Console.OpenStandardError();
 
-                if (!string.IsNullOrEmpty(result.Stdout))
-                {
-                    Console.Write(result.Stdout);
-                }
+                var exitCode = await aciService.ExecuteCommandInteractiveAsync(
+                    containerGroupName,
+                    command,
+                    stdin,
+                    stdout,
+                    stderr,
+                    timeout,
+                    cts.Token);
 
-                if (!string.IsNullOrEmpty(result.Stderr))
-                {
-                    Console.Error.Write(result.Stderr);
-                }
-
-                logger.LogDebug("Command finished with exit code {ExitCode}", result.ExitCode);
-                return result.ExitCode;
+                logger.LogDebug("Command finished with exit code {ExitCode}", exitCode);
+                return exitCode;
             }
             catch (TimeoutException ex)
             {
