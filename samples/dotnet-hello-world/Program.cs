@@ -1,26 +1,23 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Define endpoints
 app.MapGet("/", () => new
 {
-    message = "Hello from DevPod on Azure Container Instances! 🚀",
+    message = "Hello from DevPod on Azure Kubernetes Service",
     timestamp = DateTime.UtcNow,
     environment = app.Environment.EnvironmentName,
     container = Environment.GetEnvironmentVariable("HOSTNAME") ?? "unknown",
-    platform = "Azure Container Instances",
+    platform = "Azure Kubernetes Service",
 });
 
 app.MapGet("/health", () => Results.Ok(new
@@ -31,7 +28,7 @@ app.MapGet("/health", () => Results.Ok(new
 
 app.MapGet("/info", () => new
 {
-    application = "DevPod ACI Sample",
+    application = "DevPod AKS Sample",
     version = "1.0.0",
     dotnetVersion = Environment.Version.ToString(),
     osVersion = Environment.OSVersion.ToString(),
@@ -42,7 +39,6 @@ app.MapGet("/info", () => new
     currentDirectory = Environment.CurrentDirectory,
 });
 
-// Demonstrate Azure integration
 var azureSuggestions = new[]
 {
     "Azure Storage",
@@ -52,20 +48,16 @@ var azureSuggestions = new[]
     "Azure App Configuration",
 };
 
-app.MapGet("/azure", async (IConfiguration configuration) =>
+app.MapGet("/azure", (IConfiguration configuration) => new
 {
-    // This would typically connect to Azure services
-    return new
+    message = "Ready to integrate with Azure services from AKS workspaces",
+    suggestions = azureSuggestions,
+    kubernetesInfo = new
     {
-        message = "Ready to integrate with Azure services",
-        suggestions = azureSuggestions,
-        containerInfo = new
-        {
-            resourceGroup = Environment.GetEnvironmentVariable("AZURE_RESOURCE_GROUP"),
-            region = Environment.GetEnvironmentVariable("AZURE_REGION"),
-            containerGroup = Environment.GetEnvironmentVariable("MACHINE_ID"),
-        },
-    };
+        resourceGroup = Environment.GetEnvironmentVariable("AKS_RESOURCE_GROUP"),
+        clusterName = Environment.GetEnvironmentVariable("AKS_NAME"),
+        workspaceId = Environment.GetEnvironmentVariable("DEVPOD_WORKSPACE_ID"),
+    },
 });
 
 app.Run();

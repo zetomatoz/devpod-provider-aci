@@ -1,66 +1,53 @@
-# Dotnet Hello World Sample
+# .NET Hello World Sample
 
-This sample is the source for the published smoke-test image used by the ACI provider.
+This sample is a richer follow-up workspace for the AKS path.
 
-## What This Sample Is For
+Use it when:
 
-- Build and publish `ghcr.io/<your-org>/devpod-provider-aci-hello-world:latest`
-- Validate the provider against a direct ACI, image-backed workspace
+- `samples/aks-smoke` already works
+- you want an HTTP endpoint to validate inside the workspace
+- you want an optional sample image for demos or image-based experiments
 
-## What It Is Not For
+## Local-Path Workspace
 
-- The current provider release does not support `devpod up ./samples/dotnet-hello-world`
-- The current provider release does not support git or local-path workspace sync
-
-## Build the Image Locally
-
-Run the following from `samples/dotnet-hello-world`:
+After configuring the `devpod-aks` provider entry, you can run:
 
 ```bash
-docker buildx build --platform linux/amd64 -f Dockerfile -t ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest --load ../..
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" \
+devpod up ./samples/dotnet-hello-world \
+  --provider devpod-aks \
+  --id dotnet-hello \
+  --ide none
 ```
 
-The Docker build context must be the repository root so the build can include the shared `.NET` files `Directory.Build.props` and `Directory.Packages.props`. The `-f Dockerfile` flag is required because the Dockerfile lives in this sample directory, not at the repository root.
-
-`--platform linux/amd64` is required for ACI compatibility. On Apple Silicon, omitting it will usually produce a `linux/arm64` image that Azure Container Instances rejects.
-
-Equivalent command from the repository root:
+Then verify the app:
 
 ```bash
-docker buildx build --platform linux/amd64 -f samples/dotnet-hello-world/Dockerfile -t ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest --load .
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" \
+devpod ssh dotnet-hello --command 'curl -fsS http://127.0.0.1:8080/health && curl -fsS http://127.0.0.1:8080/'
 ```
 
-## Publish to GHCR
+## Build A Sample Image
 
-For a local push, `GITHUB_TOKEN` should be a GitHub Personal Access Token with permission to write packages to `ghcr.io`.
+Build the image locally:
 
 ```bash
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-docker buildx build --platform linux/amd64 -f samples/dotnet-hello-world/Dockerfile -t ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest --push .
+docker buildx build \
+  --platform linux/amd64 \
+  -f samples/dotnet-hello-world/Dockerfile \
+  -t ghcr.io/<repo-owner>/devpod-aks-hello-world:latest \
+  --load .
 ```
 
-Create the token in GitHub under `Settings` -> `Developer settings` -> `Personal access tokens`, then export it in your shell before running the commands above.
-
-After pushing the image, use that exact image reference as `HELLO_WORLD_IMAGE` in the e2e guide.
-
-Example:
+Push the image:
 
 ```bash
-export HELLO_WORLD_IMAGE="ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest"
+docker buildx build \
+  --platform linux/amd64 \
+  -f samples/dotnet-hello-world/Dockerfile \
+  -t ghcr.io/<repo-owner>/devpod-aks-hello-world:latest \
+  --push .
 ```
 
-The repository also includes a GitHub Actions workflow to publish the sample image automatically.
-
-Workflow details:
-
-- file: `.github/workflows/publish-sample-image.yml`
-- trigger: push to `main` when the sample or workflow changes, or manual dispatch
-- image name: `ghcr.io/<repo-owner>/devpod-provider-aci-hello-world`
-- tags pushed: `:latest` and a short `:sha-...` tag
-- platform: `linux/amd64` for ACI compatibility
-
-If you rely on the GitHub Actions image, set `HELLO_WORLD_IMAGE` to:
-
-```bash
-export HELLO_WORLD_IMAGE="ghcr.io/<repo-owner>/devpod-provider-aci-hello-world:latest"
-```
+`linux/amd64` matches the default AKS node pool architecture used by this repo's
+smoke environment.

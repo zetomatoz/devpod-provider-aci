@@ -1,7 +1,11 @@
-# AKS DevPod Smoke Workspace
+# AKS Smoke Workspace
 
-This directory is a minimal local-path workspace for validating the AKS-backed
-DevPod flow without uploading the full repository and its local build outputs.
+This directory is the first workspace to use when validating the AKS path.
 
-Use it for the first end-to-end `devpod up` check, then move to a larger
-workspace once the cluster and provider path are confirmed healthy.
+Why it exists:
+
+- it keeps the initial `devpod up` fast
+- it avoids syncing unrelated repository artifacts
+- it isolates cluster and provider validation from application complexity
+
+Run it through `./hack/devpod_up_aks_smoke.sh` before moving to larger samples.

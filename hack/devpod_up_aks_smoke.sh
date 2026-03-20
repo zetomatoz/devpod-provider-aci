@@ -10,7 +10,7 @@ resource_group="${AKS_RESOURCE_GROUP:-}"
 cluster_name="${AKS_NAME:-devpod-aks}"
 kubeconfig_path="${AKS_KUBECONFIG:-/tmp/devpod-aks-kubeconfig}"
 devpod_home="${DEVPOD_HOME:-/tmp/devpod-aks-home}"
-provider_name="${DEVPOD_PROVIDER_NAME:-aks-kubernetes}"
+provider_name="${DEVPOD_PROVIDER_NAME:-devpod-aks}"
 workspace_id="${DEVPOD_WORKSPACE_ID:-aks-smoke}"
 workspace_path="${DEVPOD_WORKSPACE_PATH:-${repo_root}/samples/aks-smoke}"
 kubernetes_namespace="${KUBERNETES_NAMESPACE:-devpod-workspaces}"
@@ -25,7 +25,7 @@ fi
 
 if [[ -z "${resource_group}" ]]; then
   if [[ -n "${AZURE_RESOURCE_GROUP:-}" ]]; then
-    echo "AKS_RESOURCE_GROUP must be set for the AKS smoke test. Refusing to reuse AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} because the ACI and AKS flows often target different resource groups." >&2
+    echo "AKS_RESOURCE_GROUP must be set explicitly. Refusing to reuse AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} because the smoke workflow expects dedicated AKS resources." >&2
   else
     echo "AKS_RESOURCE_GROUP must be set." >&2
   fi
@@ -42,6 +42,7 @@ echo "Using resource group: ${resource_group}"
 echo "Using cluster: ${cluster_name}"
 echo "Using kubeconfig: ${kubeconfig_path}"
 echo "Using DevPod home: ${devpod_home}"
+echo "Using DevPod provider entry: ${provider_name}"
 
 az account set --subscription "${subscription_id}"
 az aks get-credentials \

@@ -1,4 +1,4 @@
-name: Publish Sample Image
+name: Publish Sample Workspace Image
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/devpod-provider-aci-hello-world
+          images: ghcr.io/${{ github.repository_owner }}/devpod-aks-hello-world
           tags: |
             type=raw,value=latest
             type=sha,format=short

@@ -33,7 +33,7 @@ fi
 
 if [[ -z "${resource_group}" ]]; then
   if [[ -n "${AZURE_RESOURCE_GROUP:-}" ]]; then
-    echo "AKS_RESOURCE_GROUP must be set for AKS provisioning. Refusing to reuse AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} because the ACI and AKS flows often target different resource groups." >&2
+    echo "AKS_RESOURCE_GROUP must be set explicitly. Refusing to reuse AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} because this repo keeps AKS resources isolated and unambiguous." >&2
   else
     echo "AKS_RESOURCE_GROUP must be set." >&2
   fi
