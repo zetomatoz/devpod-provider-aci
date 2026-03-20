@@ -87,6 +87,169 @@ exit
 
 The detailed walkthrough lives in [tests/e2e/README.md](tests/e2e/README.md).
 
+## AKS Smoke Test
+
+This repository also includes an AKS-based smoke path that uses DevPod's
+first-party `kubernetes` provider instead of the custom ACI provider.
+
+Use this when you want to validate the Kubernetes direction end to end with the
+smallest possible workspace.
+
+Important notes before you start:
+
+- use `samples/aks-smoke` for the first test, not `devpod up .`
+- the repository root currently contains large local build outputs, so using the
+  full repo as a local-path workspace will upload far more data than needed
+- if you want the provider and workspace to appear in the normal DevPod UI, use
+  your normal DevPod home instead of the temporary `/tmp/devpod-aks-home`
+
+### Prerequisites
+
+- Azure CLI installed and logged in
+- DevPod CLI installed
+- `kubectl` installed
+- `AZURE_SUBSCRIPTION_ID` set
+- `AZURE_REGION` set, or set `AKS_LOCATION`
+
+Confirm Azure login:
+
+```bash
+az account show
+```
+
+### Step 1: Set Test Variables
+
+From the repository root:
+
+```bash
+cd "$HOME/Sites/devpod-provider-aci"  # or your local repo path
+
+export AKS_RESOURCE_GROUP="devpod-aks-rg"
+export AKS_NAME="devpod-aks"
+export AZURE_REGION="${AZURE_REGION:-westus2}"
+```
+
+The AKS helpers intentionally require `AKS_RESOURCE_GROUP`. They do not fall
+back to `AZURE_RESOURCE_GROUP`, because the direct ACI flow in this repository
+commonly uses a different resource group such as `devpod-aci-e2e`.
+
+If you want the DevPod desktop UI to show the provider and workspace, also run:
+
+```bash
+export DEVPOD_HOME="$HOME/.devpod"
+```
+
+If you skip that line, the smoke helper defaults to `/tmp/devpod-aks-home`,
+which keeps the test isolated but will not appear in the normal UI.
+
+### Step 2: Create A Temporary SSH Key
+
+AKS requires an SSH public key for the Linux node pool.
+
+```bash
+ssh-keygen -q -t ed25519 -f /tmp/devpod-aks-ssh -N '' -C devpod-aks
+export AKS_SSH_PUBLIC_KEY_FILE=/tmp/devpod-aks-ssh.pub
+```
+
+### Step 3: Provision The AKS Cluster
+
+```bash
+./hack/provision_aks.sh
+```
+
+What this does:
+
+- creates the resource group if needed
+- deploys the AKS cluster from `infra/aks/main.bicep`
+- enables RBAC, OIDC, workload identity, and Azure CNI Overlay
+
+Current default choices:
+
+- region: `westus2` unless overridden
+- cluster name: `devpod-aks` unless overridden
+- node size: `Standard_D4s_v3`
+
+### Step 4: Run The AKS Smoke Workspace
+
+```bash
+./hack/devpod_up_aks_smoke.sh
+```
+
+What this does:
+
+- fetches kubeconfig into `/tmp/devpod-aks-kubeconfig`
+- installs or reuses the `aks-kubernetes` provider
+- points that provider at the AKS context
+- uses namespace `devpod-workspaces`
+- uses storage class `managed-csi`
+- runs `devpod up` against `samples/aks-smoke`
+
+If the command succeeds, you should see a message telling you that the
+devcontainer was created and that you can SSH into the workspace.
+
+### Step 5: Verify The Workspace
+
+List the DevPod workspaces:
+
+```bash
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" devpod list
+```
+
+You should see `aks-smoke`.
+
+Open a shell in the workspace:
+
+```bash
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" devpod ssh aks-smoke
+```
+
+Inside the workspace, verify the mount:
+
+```bash
+pwd
+ls -la /workspaces/aks-smoke
+exit
+```
+
+You can also verify directly from Kubernetes:
+
+```bash
+kubectl --kubeconfig /tmp/devpod-aks-kubeconfig -n devpod-workspaces get pods,pvc
+```
+
+Expected result:
+
+- one pod in `Running`
+- one PVC in `Bound`
+
+### Cleanup
+
+Delete the smoke workspace:
+
+```bash
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" devpod delete aks-smoke --force --ignore-not-found
+```
+
+Delete the AKS cluster:
+
+```bash
+az aks delete --resource-group "$AKS_RESOURCE_GROUP" --name "$AKS_NAME" --yes
+```
+
+Delete the temporary SSH key:
+
+```bash
+rm -f /tmp/devpod-aks-ssh /tmp/devpod-aks-ssh.pub
+```
+
+Optional: if you used the temporary DevPod home, remove it too:
+
+```bash
+rm -rf /tmp/devpod-aks-home /tmp/devpod-aks-kubeconfig
+```
+
+For the longer-form AKS notes, see [docs/aks-devpod-smoke.md](docs/aks-devpod-smoke.md).
+
 ## Development
 
 Development and sample-image publishing details are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).

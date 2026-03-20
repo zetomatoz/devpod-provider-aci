@@ -1,0 +1,12 @@
+.git/
+.vs/
+.vscode/
+dist/
+**/bin/
+**/obj/
+**/.DS_Store
+**/node_modules/
+**/TestResults/
+**/coverage/
+**/*.user
+**/*.suo
