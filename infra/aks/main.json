@@ -1,0 +1,275 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.36.177.2456",
+      "templateHash": "2942548044186665964"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for the AKS cluster."
+      }
+    },
+    "clusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "AKS cluster name."
+      }
+    },
+    "kubernetesVersion": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Kubernetes version. Leave empty to let AKS choose the default supported version."
+      }
+    },
+    "dnsPrefix": {
+      "type": "string",
+      "defaultValue": "[parameters('clusterName')]",
+      "metadata": {
+        "description": "DNS prefix for the cluster API server endpoint."
+      }
+    },
+    "skuTier": {
+      "type": "string",
+      "defaultValue": "Free",
+      "allowedValues": [
+        "Free",
+        "Standard"
+      ],
+      "metadata": {
+        "description": "AKS SKU tier."
+      }
+    },
+    "linuxAdminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Admin username for Linux worker nodes."
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key for Linux worker nodes."
+      }
+    },
+    "systemPoolName": {
+      "type": "string",
+      "defaultValue": "system",
+      "metadata": {
+        "description": "System node pool name."
+      }
+    },
+    "nodeVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D4s_v3",
+      "metadata": {
+        "description": "VM size for the system node pool."
+      }
+    },
+    "nodeCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "metadata": {
+        "description": "Initial node count for the system node pool."
+      }
+    },
+    "minNodeCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "metadata": {
+        "description": "Minimum autoscaler node count."
+      }
+    },
+    "maxNodeCount": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 1,
+      "metadata": {
+        "description": "Maximum autoscaler node count."
+      }
+    },
+    "osDiskSizeGb": {
+      "type": "int",
+      "defaultValue": 128,
+      "minValue": 30,
+      "metadata": {
+        "description": "OS disk size in GiB for worker nodes."
+      }
+    },
+    "maxPods": {
+      "type": "int",
+      "defaultValue": 110,
+      "minValue": 30,
+      "metadata": {
+        "description": "Maximum pods per node."
+      }
+    },
+    "serviceCidr": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "Service CIDR for the cluster."
+      }
+    },
+    "dnsServiceIp": {
+      "type": "string",
+      "defaultValue": "10.0.0.10",
+      "metadata": {
+        "description": "DNS service IP inside the service CIDR range."
+      }
+    },
+    "podCidr": {
+      "type": "string",
+      "defaultValue": "192.168.0.0/16",
+      "metadata": {
+        "description": "Pod CIDR used by Azure CNI Overlay."
+      }
+    },
+    "upgradeChannel": {
+      "type": "string",
+      "defaultValue": "patch",
+      "allowedValues": [
+        "patch",
+        "stable",
+        "rapid",
+        "node-image",
+        "none"
+      ],
+      "metadata": {
+        "description": "Cluster auto-upgrade channel."
+      }
+    },
+    "nodeOsUpgradeChannel": {
+      "type": "string",
+      "defaultValue": "NodeImage",
+      "allowedValues": [
+        "NodeImage",
+        "SecurityPatch",
+        "Unmanaged",
+        "None"
+      ],
+      "metadata": {
+        "description": "Node OS image auto-upgrade channel."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Optional tags applied to the AKS resource."
+      }
+    }
+  },
+  "variables": {
+    "clusterTags": "[union(parameters('tags'), createObject('workload', 'devpod', 'managedBy', 'bicep', 'environment', 'dev'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2025-02-01",
+      "name": "[parameters('clusterName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('clusterTags')]",
+      "sku": {
+        "name": "Base",
+        "tier": "[parameters('skuTier')]"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "dnsPrefix": "[parameters('dnsPrefix')]",
+        "kubernetesVersion": "[if(empty(parameters('kubernetesVersion')), null(), parameters('kubernetesVersion'))]",
+        "enableRBAC": true,
+        "linuxProfile": {
+          "adminUsername": "[parameters('linuxAdminUsername')]",
+          "ssh": {
+            "publicKeys": [
+              {
+                "keyData": "[parameters('sshPublicKey')]"
+              }
+            ]
+          }
+        },
+        "agentPoolProfiles": [
+          {
+            "name": "[parameters('systemPoolName')]",
+            "mode": "System",
+            "count": "[parameters('nodeCount')]",
+            "vmSize": "[parameters('nodeVmSize')]",
+            "type": "VirtualMachineScaleSets",
+            "osType": "Linux",
+            "osSKU": "Ubuntu",
+            "osDiskSizeGB": "[parameters('osDiskSizeGb')]",
+            "maxPods": "[parameters('maxPods')]",
+            "enableAutoScaling": true,
+            "minCount": "[parameters('minNodeCount')]",
+            "maxCount": "[parameters('maxNodeCount')]",
+            "upgradeSettings": {
+              "maxSurge": "33%"
+            }
+          }
+        ],
+        "oidcIssuerProfile": {
+          "enabled": true
+        },
+        "securityProfile": {
+          "workloadIdentity": {
+            "enabled": true
+          }
+        },
+        "autoUpgradeProfile": {
+          "upgradeChannel": "[parameters('upgradeChannel')]",
+          "nodeOSUpgradeChannel": "[parameters('nodeOsUpgradeChannel')]"
+        },
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "networkPluginMode": "overlay",
+          "loadBalancerSku": "standard",
+          "outboundType": "loadBalancer",
+          "serviceCidr": "[parameters('serviceCidr')]",
+          "dnsServiceIP": "[parameters('dnsServiceIp')]",
+          "podCidr": "[parameters('podCidr')]"
+        },
+        "storageProfile": {
+          "blobCSIDriver": {
+            "enabled": true
+          },
+          "diskCSIDriver": {
+            "enabled": true
+          },
+          "fileCSIDriver": {
+            "enabled": true
+          },
+          "snapshotController": {
+            "enabled": true
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "clusterName": {
+      "type": "string",
+      "value": "[parameters('clusterName')]"
+    },
+    "clusterResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+    },
+    "clusterFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2025-02-01').fqdn]"
+    }
+  }
+}

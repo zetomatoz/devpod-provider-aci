@@ -1,181 +1,76 @@
 # Development Guide
 
-This document provides development setup instructions and project structure details for the DevPod Provider ACI.
-
-## Repo Structure
-
-```
-devpod-provider-aci/
-├── src/
-│   ├── DevPod.Provider.ACI/
-│   │   ├── DevPod.Provider.ACI.csproj
-│   │   ├── Program.cs
-│   │   ├── Commands/
-│   │   │   ├── InitCommand.cs
-│   │   │   ├── CreateCommand.cs
-│   │   │   ├── DeleteCommand.cs
-│   │   │   ├── StartCommand.cs
-│   │   │   ├── StopCommand.cs
-│   │   │   ├── StatusCommand.cs
-│   │   │   └── CommandCommand.cs
-│   │   ├── Services/
-│   │   │   ├── IAciService.cs
-│   │   │   ├── AciService.cs
-│   │   │   ├── IAuthenticationService.cs
-│   │   │   ├── AuthenticationService.cs
-│   │   │   ├── IProviderOptionsService.cs
-│   │   │   └── ProviderOptionsService.cs
-│   │   ├── Models/
-│   │   │   ├── ProviderOptions.cs
-│   │   │   ├── ContainerGroupDefinition.cs
-│   │   │   └── ContainerStatus.cs
-│   │   ├── Infrastructure/
-│   │   │   ├── Constants.cs
-│   │   │   ├── Logger.cs
-│   │   │   └── CommandRouter.cs
-│   │   └── appsettings.json
-│   │
-│   └── DevPod.Provider.ACI.Tests/
-│       ├── DevPod.Provider.ACI.Tests.csproj
-│       ├── Unit/
-│       │   ├── Services/
-│       │   │   ├── AciServiceTests.cs
-│       │   │   └── ProviderOptionsServiceTests.cs
-│       │   └── Commands/
-│       │       └── CommandTests.cs
-│       └── Integration/
-│           └── AciProviderIntegrationTests.cs
-│
-├── provider.yaml
-├── hack/
-│   ├── build.sh
-│   ├── build.ps1
-│   └── release.sh
-├── samples/
-│   ├── dotnet-hello-world/
-│   │   ├── .devcontainer/
-│   │   │   └── devcontainer.json
-│   │   ├── HelloWorld.csproj
-│   │   ├── Program.cs
-│   │   └── README.md
-│   └── aspire-sample/
-│       ├── .devcontainer/
-│       │   └── devcontainer.json
-│       └── AspireSample.AppHost/
-├── docs/
-│   ├── README.md
-│   ├── ARCHITECTURE.md
-│   └── DEVELOPMENT.md
-├── .github/
-│   └── workflows/
-│       ├── build.yml
-│       ├── test.yml
-│       └── release.yml
-├── DevPod.Provider.ACI.sln
-├── global.json
-├── Directory.Build.props
-├── .editorconfig
-├── .gitignore
-└── README.md
-```
+This repository now supports an AKS-first workflow only.
 
 ## Prerequisites
 
+- Azure CLI
+- `kubectl`
+- DevPod CLI
 - .NET 8 SDK
-- Azure CLI (optional, for CLI-based authentication)
-- DevPod CLI for testing
+- Python 3
 
-## Building from Source
+## Repository Highlights
 
-### Linux/macOS
-```bash
-./hack/build.sh
-```
+- `infra/aks/`: AKS cluster definition
+- `hack/provision_aks.sh`: AKS provisioning helper
+- `hack/devpod_up_aks_smoke.sh`: DevPod smoke helper
+- `samples/aks-smoke/`: first smoke workspace
+- `samples/dotnet-hello-world/`: richer sample app and optional image source
 
-### Windows
-```bash
-./hack/build.ps1
-```
+## Recommended Validation Commands
 
-### Manual Build
-```bash
-dotnet build DevPod.Provider.ACI.sln
-dotnet publish src/DevPod.Provider.ACI/DevPod.Provider.ACI.csproj -c Release -o dist/
-```
-
-## Testing
-
-### Unit Tests
-```bash
-dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj
-```
-
-### Integration Tests
-Integration tests require Azure credentials and may create actual resources:
+Validate the shell helpers:
 
 ```bash
-# Set up Azure credentials
-az login
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-export AZURE_RESOURCE_GROUP="test-rg"
-export AZURE_REGION="eastus"
-
-# Run integration tests
-dotnet test src/DevPod.Provider.ACI.Tests/DevPod.Provider.ACI.Tests.csproj --filter Category=Integration
+bash -n hack/*.sh
 ```
 
-## Local Development and Testing
-
-### Install Local Provider
-```bash
-# Build the provider first
-./hack/build.sh
-
-# Add the local provider to DevPod
-devpod provider add ./dist/provider-local.yaml --name aci-local
-```
-
-### Test with DevPod
-```bash
-# Set required Azure environment variables
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-export AZURE_RESOURCE_GROUP="devpod-test-rg"
-export AZURE_REGION="eastus"
-
-# Create a workspace
-devpod up ./samples/dotnet-hello-world --provider aci-local
-
-# Test provider commands directly
-./dist/devpod-provider-aci init
-./dist/devpod-provider-aci create
-./dist/devpod-provider-aci status
-```
-
-## Debug Mode
-
-Enable debug logging by setting the environment variable:
+Validate the checked-in JSON files:
 
 ```bash
-export DEVPOD_DEBUG=true
+python3 -m json.tool .devcontainer/devcontainer.json >/dev/null
+python3 -m json.tool infra/aks/main.json >/dev/null
+python3 -m json.tool samples/aks-smoke/.devcontainer/devcontainer.json >/dev/null
+python3 -m json.tool samples/dotnet-hello-world/.devcontainer/devcontainer.json >/dev/null
 ```
 
-## Architecture
+Build the richer sample app:
 
-For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+```bash
+dotnet restore --locked-mode samples/dotnet-hello-world/HelloWorld.csproj
+dotnet build --no-restore --configuration Release samples/dotnet-hello-world/HelloWorld.csproj
+```
 
-## Contributing
+## Local Smoke Workflow
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run tests and ensure they pass
-6. Submit a pull request
+Use the smallest workspace first:
 
-## Release Process
+```bash
+export AZURE_SUBSCRIPTION_ID="<subscription-id>"
+export AZURE_REGION="westus2"
+export AKS_RESOURCE_GROUP="devpod-aks-rg"
+export AKS_NAME="devpod-aks"
+export AKS_SSH_PUBLIC_KEY_FILE="/path/to/key.pub"
 
-1. Render release artifacts: `./hack/release.sh <version>`
-2. Verify and publish the generated assets in `dist/` (use `--publish` to upload via `gh` automatically)
-3. Create a git tag: `git tag v<version>`
-4. Push the tag: `git push origin v<version>`
-5. Let the CI pipeline pick up the tag and validate the release
+./hack/provision_aks.sh
+./hack/devpod_up_aks_smoke.sh
+```
+
+Detailed operator steps are in [runbooks/aks-smoke.md](./runbooks/aks-smoke.md).
+
+## Sample App
+
+`samples/dotnet-hello-world/` is no longer tied to a custom provider. Use it as:
+
+- a local-path DevPod workspace after the AKS smoke run succeeds
+- an optional container image for follow-up validation
+
+Image publishing notes live in
+[samples/dotnet-hello-world/README.md](../samples/dotnet-hello-world/README.md).
+
+## Documentation Rules
+
+- Keep the primary story AKS-first.
+- Put historical ACI notes only under `docs/archive/aci/`.
+- Prefer repo-relative paths and generic examples over local absolute paths.

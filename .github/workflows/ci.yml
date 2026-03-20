@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests:
-    name: Build and Test
+  validate:
+    name: Validate Repo
     runs-on: ubuntu-latest
     env:
       DOTNET_NOLOGO: true
@@ -26,36 +26,20 @@ jobs:
         with:
           dotnet-version: 8.0.x
           cache: true
-          cache-dependency-path: '**/packages.lock.json'
+          cache-dependency-path: samples/dotnet-hello-world/packages.lock.json
 
-      - name: Restore
-        run: dotnet restore --locked-mode DevPod.Provider.ACI.sln
+      - name: Validate shell scripts
+        run: bash -n hack/*.sh
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release DevPod.Provider.ACI.sln
-
-      - name: Test (with coverage gate)
+      - name: Validate JSON files
         run: |
-          dotnet test --no-build --configuration Release \
-            /p:CollectCoverage=true \
-            /p:CoverletOutputFormat=lcov \
-            /p:ExcludeByFile="**/Program.cs" \
-            /p:Threshold=50 \
-            /p:ThresholdType=line \
-            /p:ThresholdStat=total
+          python3 -m json.tool .devcontainer/devcontainer.json >/dev/null
+          python3 -m json.tool infra/aks/main.json >/dev/null
+          python3 -m json.tool samples/aks-smoke/.devcontainer/devcontainer.json >/dev/null
+          python3 -m json.tool samples/dotnet-hello-world/.devcontainer/devcontainer.json >/dev/null
 
-      - name: Upload Test Results (artifacts)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            **/TestResults/**
+      - name: Restore sample app
+        run: dotnet restore --locked-mode samples/dotnet-hello-world/HelloWorld.csproj
 
-      - name: Upload Coverage (artifacts)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: |
-            **/coverage.info
+      - name: Build sample app
+        run: dotnet build --no-restore --configuration Release samples/dotnet-hello-world/HelloWorld.csproj

@@ -1,68 +1,86 @@
-# DevPod Provider for Azure Container Instances
+# DevPod on AKS
 
-Run your dev containers **serverlessly** on Azure Container Instances (ACI) with DevPod!
+This repository is now an AKS-first blueprint for running DevPod workspaces on
+Azure Kubernetes Service by using DevPod's built-in `kubernetes` provider. The
+old ACI provider implementation has been retired from the mainline repository.
 
-## 🚀 Features
+Recommended repository name: `devpod-aks`.
 
-- **Serverless Development**: No VMs to manage - containers run directly on ACI
-- **Cost Effective**: Pay only for the compute resources you use (per-second billing)
-- **Fast Startup**: Containers start in seconds, not minutes
-- **Flexible Resources**: Configure CPU, memory, and GPU as needed
-- **Persistent Storage**: Optional Azure File Share integration for workspace persistence
-- **Network Integration**: Support for both public and private (VNet) deployments
-- **Container Registry**: Seamless integration with Azure Container Registry
-- **Auto-shutdown**: Configurable inactivity timeout to save costs
+If your local checkout or Git remote still uses `devpod-provider-aci`, treat
+that as legacy naming. The repository contents below now reflect the AKS
+direction.
 
-## 📋 Prerequisites
+## What This Repo Contains
 
-- DevPod CLI installed ([Installation Guide](https://devpod.sh/docs/getting-started/install))
-- Azure subscription with ACI service enabled
-- Azure CLI installed and configured (or service principal credentials)
-- .NET 8 SDK (for building from source)
+- `infra/aks/`: AKS infrastructure definition in Bicep
+- `hack/provision_aks.sh`: creates or updates the AKS cluster
+- `hack/devpod_up_aks_smoke.sh`: configures DevPod against AKS and runs the
+  smoke workspace
+- `samples/aks-smoke/`: smallest supported workspace for first validation
+- `samples/dotnet-hello-world/`: richer sample app for follow-up validation
+- `docs/`: architecture notes, contributor guidance, runbooks, and roadmap
 
-## 🔧 Installation
+## Quick Start
 
-### Option 1: Install from Release
-
-```bash
-# Add the provider from GitHub releases
-devpod provider add github.com/your-org/devpod-provider-aci
-
-# Or add from a specific release
-devpod provider add https://github.com/your-org/devpod-provider-aci/releases/download/v0.1.0/provider.yaml
-```
-
-### Option 2: Build from Source
+Set the required Azure variables:
 
 ```bash
-# Clone the repository
-git clone https://github.com/zetomatoz/devpod-provider-aci
-cd devpod-provider-aci
-
-# Build the provider
-./hack/build.sh  # On Linux/macOS
-# OR
-./hack/build.ps1 # On Windows
-
-# Add the local provider manifest rendered in dist/
-devpod provider add ./dist/provider-local.yaml --name aci-local
+export AZURE_SUBSCRIPTION_ID="<subscription-id>"
+export AZURE_REGION="westus2"
+export AKS_RESOURCE_GROUP="devpod-aks-rg"
+export AKS_NAME="devpod-aks"
 ```
 
-## 🛠️ Development
+Create a temporary SSH key for the AKS node pool:
 
-For detailed development setup, building instructions, and project structure, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+```bash
+ssh-keygen -q -t ed25519 -f /tmp/devpod-aks-ssh -N '' -C devpod-aks
+export AKS_SSH_PUBLIC_KEY_FILE=/tmp/devpod-aks-ssh.pub
+```
 
-## 🔐 Registry Authentication
+Provision the cluster:
 
-- Recommended: Managed Identity (secretless)
-  - Set `ACR_AUTH_MODE=ManagedIdentity` (default).
-  - Optionally set `USER_ASSIGNED_IDENTITY_RESOURCE_ID` to use a user-assigned identity; otherwise a system-assigned identity is used.
-  - Grant the identity `AcrPull` on your ACR.
-- Alternative: Key Vault backed secrets
-  - Set `ACR_AUTH_MODE=KeyVault`, `KEYVAULT_URI`, `ACR_USERNAME_SECRET_NAME`, and `ACR_PASSWORD_SECRET_NAME`.
-  - Credentials are fetched at runtime with `DefaultAzureCredential` and never logged.
-- Fallback: Username/Password
-  - Set `ACR_AUTH_MODE=UsernamePassword` with `ACR_USERNAME` and `ACR_PASSWORD`.
-  - Prefer ACR tokens scoped to specific repositories over admin credentials and rotate regularly.
+```bash
+./hack/provision_aks.sh
+```
 
-Note: Secretless pull via Managed Identity is the most secure and operationally simple option when using Azure Container Registry.
+Run the first smoke workspace:
+
+```bash
+./hack/devpod_up_aks_smoke.sh
+```
+
+Verify the workspace:
+
+```bash
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" devpod list
+DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" devpod ssh aks-smoke
+kubectl --kubeconfig /tmp/devpod-aks-kubeconfig -n devpod-workspaces get pods,pvc
+```
+
+The detailed walkthrough lives in [docs/runbooks/aks-smoke.md](docs/runbooks/aks-smoke.md).
+
+## Repo Layout
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): repo architecture and control
+  flow
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): contributor guide and validation
+  commands
+- [docs/roadmap.md](docs/roadmap.md): next improvements for the AKS path
+- [docs/adrs/0001-aks-kubernetes-first.md](docs/adrs/0001-aks-kubernetes-first.md):
+  architectural decision record for the pivot
+- [samples/aks-smoke/README.md](samples/aks-smoke/README.md): smoke workspace
+  notes
+- [samples/dotnet-hello-world/README.md](samples/dotnet-hello-world/README.md):
+  optional richer sample
+
+## Operating Model
+
+- The primary workflow is `DevPod CLI -> kubernetes provider -> AKS`.
+- The repository owns only the AKS bootstrap assets and helper scripts.
+- No custom DevPod provider is shipped from this repo anymore.
+
+## Archived ACI Material
+
+Historical ACI research is still available under `docs/archive/aci/` for
+context, but it is no longer part of the supported path.

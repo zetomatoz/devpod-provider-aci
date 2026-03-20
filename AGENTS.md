@@ -1,38 +1,53 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Codex when working in this repository.
 
 ## Project Overview
 
-This is a skeleton repository for "devpod-provider-aci" - a DevPod provider for Azure Container Instance. The repository currently contains only basic setup files:
+This repository is an AKS-first DevPod blueprint. It focuses on:
 
-- `README.md`: Basic project description 
-- `LICENSE`: MIT license
-- `.gitignore`: Python-focused gitignore with comprehensive exclusions
+- provisioning Azure Kubernetes Service with reusable infrastructure
+- configuring DevPod's built-in `kubernetes` provider for AKS
+- keeping smoke-test workspaces and helper scripts small and repeatable
+
+The mainline repository no longer carries the retired Azure Container Instances
+provider implementation. Historical ACI notes live only under `docs/archive/aci/`.
+
+Recommended repository name: `devpod-aks`.
 
 ## Repository State
 
-This is a freshly initialized repository on the `bootstrap` branch with minimal content. The actual DevPod provider implementation has not yet been created.
+The supported story is now:
+
+- `infra/aks/` defines the cluster shape
+- `hack/provision_aks.sh` provisions AKS
+- `hack/devpod_up_aks_smoke.sh` wires DevPod to the cluster
+- `samples/aks-smoke/` is the first validation target
+- `samples/dotnet-hello-world/` is an optional richer sample
 
 ## Development Setup
 
-No build system, package management, or development commands are currently configured. The project will likely need:
+Common local tools:
 
-- C# language setup (typical for DevPod providers)
-- Build configuration for DevPod provider plugin
-- Azure SDK dependencies for ACI integration
-- Testing framework setup
+- Azure CLI
+- `kubectl`
+- DevPod CLI
+- .NET 8 SDK for the sample app
+- Python 3 for lightweight local validation helpers
 
 ## Architecture Notes
 
-DevPod providers typically:
-- Implement the DevPod provider interface
-- Handle container lifecycle management
-- Manage cloud resource provisioning/deprovisioning
-- Provide configuration for development environment setup
+- Prefer DevPod's first-party Kubernetes workflow over repo-owned control-plane
+  code.
+- Keep repo logic thin and declarative: Bicep, shell helpers, docs, and sample
+  workspaces.
+- Avoid rebuilding lifecycle logic that DevPod and Kubernetes already provide.
 
-For ACI specifically, this would involve:
-- Azure authentication and resource management
-- Container Instance creation/deletion
-- Networking and storage configuration
-- Environment variable and secret management
+## Repository Hygiene
+
+- Never commit machine-specific absolute filesystem paths such as `/Users/...`
+  into repository files.
+- Prefer repo-relative paths in documentation and generic paths in examples so
+  the repository stays portable.
+- Keep ACI material in `docs/archive/aci/` only; do not reintroduce it into the
+  main product story unless the user explicitly asks for historical context.
