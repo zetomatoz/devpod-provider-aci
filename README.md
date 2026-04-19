@@ -1,13 +1,10 @@
 # DevPod on AKS
 
-This repository is now an AKS-first blueprint for running DevPod workspaces on
-Azure Kubernetes Service by using DevPod's built-in `kubernetes` provider. The
-old ACI provider implementation has been retired from the mainline repository.
+This repository is an AKS-first blueprint for running DevPod workspaces on
+Azure Kubernetes Service by using DevPod's built-in `kubernetes` provider.
 
-Repository name: `devpod-provider-aks`.
-
-The older `devpod-provider-aci` name now refers only to the retired ACI
-prototype period.
+- Run devcontainers on your private cloud
+- Run AI agents in remote sandboxes preconfigured with devcontainers.json files
 
 ## What This Repo Contains
 
