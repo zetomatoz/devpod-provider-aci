@@ -1,9 +1,9 @@
 # DevPod on AKS
 
-This repository is an AKS-first blueprint for running DevPod workspaces on
+This repository is an AKS-first blueprint for running [DevPod workspaces](https://devpod.sh) on
 Azure Kubernetes Service by using DevPod's built-in `kubernetes` provider.
 
-- Run devcontainers on your private cloud
+- Run devcontainers on your private kubernetes cluster
 - Run AI agents in remote sandboxes preconfigured with devcontainers.json files
 
 ## What This Repo Contains
