@@ -1,8 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY Directory.Build.props ./
-COPY Directory.Packages.props ./
 COPY samples/dotnet-hello-world/HelloWorld.csproj ./samples/dotnet-hello-world/
 COPY samples/dotnet-hello-world/packages.lock.json ./samples/dotnet-hello-world/
 COPY samples/dotnet-hello-world/Program.cs ./samples/dotnet-hello-world/
