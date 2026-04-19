@@ -69,7 +69,7 @@ The helper script will:
 
 - fetch kubeconfig into `/tmp/devpod-aks-kubeconfig`
 - use `/tmp/devpod-aks-home` unless `DEVPOD_HOME` is already set
-- install or reuse a DevPod provider entry named `devpod-aks`
+- install or reuse a DevPod provider entry named `devpod-provider-aks`
 - target namespace `devpod-workspaces`
 - target storage class `managed-csi`
 - run `devpod up` against `samples/aks-smoke`

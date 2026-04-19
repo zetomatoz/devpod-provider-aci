@@ -1,5 +1,5 @@
 {
-  "name": "devpod-aks",
+  "name": "devpod-provider-aks",
   "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
   "remoteUser": "vscode",
   "customizations": {

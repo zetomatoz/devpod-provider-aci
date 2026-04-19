@@ -10,12 +10,12 @@ Use it when:
 
 ## Local-Path Workspace
 
-After configuring the `devpod-aks` provider entry, you can run:
+After configuring the `devpod-provider-aks` provider entry, you can run:
 
 ```bash
 DEVPOD_HOME="${DEVPOD_HOME:-/tmp/devpod-aks-home}" \
 devpod up ./samples/dotnet-hello-world \
-  --provider devpod-aks \
+  --provider devpod-provider-aks \
   --id dotnet-hello \
   --ide none
 ```
@@ -35,7 +35,7 @@ Build the image locally:
 docker buildx build \
   --platform linux/amd64 \
   -f samples/dotnet-hello-world/Dockerfile \
-  -t ghcr.io/<repo-owner>/devpod-aks-hello-world:latest \
+  -t ghcr.io/<repo-owner>/devpod-provider-aks-hello-world:latest \
   --load .
 ```
 
@@ -45,7 +45,7 @@ Push the image:
 docker buildx build \
   --platform linux/amd64 \
   -f samples/dotnet-hello-world/Dockerfile \
-  -t ghcr.io/<repo-owner>/devpod-aks-hello-world:latest \
+  -t ghcr.io/<repo-owner>/devpod-provider-aks-hello-world:latest \
   --push .
 ```
 
