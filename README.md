@@ -4,11 +4,10 @@ This repository is now an AKS-first blueprint for running DevPod workspaces on
 Azure Kubernetes Service by using DevPod's built-in `kubernetes` provider. The
 old ACI provider implementation has been retired from the mainline repository.
 
-Recommended repository name: `devpod-aks`.
+Repository name: `devpod-provider-aks`.
 
-If your local checkout or Git remote still uses `devpod-provider-aci`, treat
-that as legacy naming. The repository contents below now reflect the AKS
-direction.
+The older `devpod-provider-aci` name now refers only to the retired ACI
+prototype period.
 
 ## What This Repo Contains
 

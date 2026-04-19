@@ -13,7 +13,7 @@ This repository is an AKS-first DevPod blueprint. It focuses on:
 The mainline repository no longer carries the retired Azure Container Instances
 provider implementation. Historical ACI notes live only under `docs/archive/aci/`.
 
-Recommended repository name: `devpod-aks`.
+Repository name: `devpod-provider-aks`.
 
 ## Repository State
 
